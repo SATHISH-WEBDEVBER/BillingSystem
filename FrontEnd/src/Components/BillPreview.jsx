@@ -2,9 +2,12 @@ import React from "react";
 import { numberToWords } from "../utils/numToWords";
 
 export default function BillPreview({ data, items, totals }) {
+  // 1. FILTER: Only show items that have a description
+  const validItems = items.filter(item => item.desc && item.desc.trim() !== "");
+
   const minRows = 20; 
-  // Safety: items might be empty now, but this works fine
-  const emptyRows = Array.from({ length: Math.max(0, minRows - items.length) });
+  // 2. Use validItems.length to calculate empty rows
+  const emptyRows = Array.from({ length: Math.max(0, minRows - validItems.length) });
 
   const formatDate = (dateString) => {
     if(!dateString) return "";
@@ -62,8 +65,8 @@ export default function BillPreview({ data, items, totals }) {
                 </tr>
             </thead>
             <tbody>
-                {items.map((item, index) => {
-                    // FIX: Safe Number Conversion
+                {/* 3. MAP OVER validItems INSTEAD OF items */}
+                {validItems.map((item, index) => {
                     const qty = Number(item.qty) || 0;
                     const rate = Number(item.rate) || 0;
                     const val = qty * rate;
@@ -99,7 +102,8 @@ export default function BillPreview({ data, items, totals }) {
             <div className="totals-row">
                 <div className="label">Total</div>
                 <div className="value" style={{borderLeft:"1px solid black", width:"90px", textAlign:"center", borderRight:"1px solid black", marginRight:"170px"}}>
-                   {items.reduce((acc, i) => acc + (Number(i.qty) || 0), 0).toFixed(2)}
+                   {/* Calculate total Qty based on valid items only */}
+                   {validItems.reduce((acc, i) => acc + (Number(i.qty) || 0), 0).toFixed(2)}
                 </div>
                 <div className="value" style={{width:"90px"}}>{totals.subTotal}</div>
             </div>

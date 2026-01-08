@@ -11,15 +11,16 @@ import SuccessPage from "./components/SuccessPage";
 
 // Global Styles
 import "./styles/app.css"; 
-import "./styles/bill.css"; // Ensure bill styles are loaded globally
+import "./styles/bill.css"; 
 
 export default function App() {
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-  // --- STATE ---
-  const [view, setView] = useState("dashboard"); 
+  // --- APP STATE ---
+  const [view, setView] = useState("dashboard"); // 'dashboard' or 'success'
   const [loading, setLoading] = useState(true);
   
+  // Data State
   const [billData, setBillData] = useState({
     clientName: "MOHAN",
     clientAddress: "Kavandampatty",
@@ -36,7 +37,7 @@ export default function App() {
 
   const [productCatalog, setProductCatalog] = useState([]);
   
-  // --- LOAD DATA ---
+  // --- INITIAL LOAD ---
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -57,7 +58,7 @@ export default function App() {
 
   const totals = calculateTotals(items);
 
-  // --- ACTIONS ---
+  // --- HANDLERS ---
   const handleDataChange = (e) => setBillData({ ...billData, [e.target.name]: e.target.value });
   
   const addItem = () => setItems([...items, { category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
@@ -68,12 +69,14 @@ export default function App() {
     const updated = [...items];
     updated[index][field] = value;
     
+    // Logic: Reset fields if category changes
     if (field === 'category') { 
         updated[index].desc = ""; 
         updated[index].rate = ""; 
         updated[index].unit = ""; 
     }
     
+    // Logic: Auto-fill price if item selected
     if (field === 'desc') {
         const categoryData = productCatalog.find(cat => cat.category === updated[index].category);
         const itemData = categoryData?.items.find(i => i.name === value);
@@ -82,12 +85,16 @@ export default function App() {
             updated[index].unit = itemData.unit; 
         }
     }
+    // Note: If field is 'rate', it updates directly here, allowing manual override
     setItems(updated);
   };
 
+  // --- GENERATE & SAVE (With Price Update Logic) ---
   const handleGenerateBill = async () => {
     try {
-      if (items.length === 0 || !items[0].desc) return alert("Add at least one product!");
+      // 1. Validate: Filter out empty rows
+      const validItems = items.filter(item => item.desc && item.desc.trim() !== "");
+      if (validItems.length === 0) return alert("Add at least one product!");
 
       const payload = {
         billNo: billData.billNo,
@@ -97,11 +104,21 @@ export default function App() {
            mobile: billData.clientMobile,
            address: billData.clientAddress
         },
-        items: items.map(i => ({...i, amount: i.qty * i.rate})),
+        items: validItems.map(i => ({...i, amount: i.qty * i.rate})),
         totals
       };
 
+      // 2. Save the Bill
       await axios.post('http://localhost:5000/api/bills/save', payload);
+
+      // 3. Update Prices in DB (Bulk Update)
+      // This sends the items (with potential manual price changes) to update the DB
+      await axios.put('http://localhost:5000/api/products/bulk-update', validItems);
+
+      // 4. Refresh Catalog (So next bill shows the updated price)
+      const prodRes = await axios.get('http://localhost:5000/api/products');
+      setProductCatalog(prodRes.data);
+
       setView("success");
 
     } catch (error) {
@@ -110,6 +127,7 @@ export default function App() {
     }
   };
 
+  // --- EXPORT ---
   const handleExport = async (format) => {
     const element = document.getElementById("bill-preview");
     const canvas = await html2canvas(element, { scale: 3, useCORS: true });
@@ -117,7 +135,9 @@ export default function App() {
     if (format === 'pdf') {
         const imgData = canvas.toDataURL("image/png");
         const pdf = new jsPDF("p", "mm", "a4");
-        pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
         pdf.save(`Bill-${billData.billNo}.pdf`);
     } else if (format === 'img') {
         const link = document.createElement('a');
@@ -127,6 +147,7 @@ export default function App() {
     }
   };
 
+  // --- SHARE ---
   const handleShare = async () => {
     const element = document.getElementById("bill-preview");
     const canvas = await html2canvas(element, { scale: 3 });
@@ -146,16 +167,21 @@ export default function App() {
     });
   };
 
+  // --- NEW BILL ---
   const handleNewBill = async () => {
     setLoading(true);
     setItems([{ category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
+    
+    // Fetch the new Next Bill Number
     const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
+    
     setBillData(prev => ({ 
         ...prev, 
         billNo: billRes.data.nextBillNo, 
         clientName: "", 
         clientMobile: "" 
     }));
+    
     setView("dashboard");
     setLoading(false);
   };
@@ -164,7 +190,8 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      {/* LEFT PANEL */}
+      
+      {/* LEFT PANEL: DASHBOARD / SUCCESS */}
       <div className="editor-panel">
         {view === 'dashboard' ? (
           <Dashboard 
@@ -187,10 +214,11 @@ export default function App() {
         )}
       </div>
 
-      {/* RIGHT PANEL */}
+      {/* RIGHT PANEL: PREVIEW */}
       <div className="preview-panel">
         <BillPreview data={billData} items={items} totals={totals} />
       </div>
+
     </div>
   );
 }
