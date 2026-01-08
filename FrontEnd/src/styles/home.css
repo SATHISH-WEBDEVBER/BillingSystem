@@ -1,0 +1,137 @@
+/* CONTAINER */
+.home-container {
+  padding: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* 1. HERO BUTTON */
+.hero-action {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border-radius: 16px;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4);
+  transition: transform 0.2s;
+  margin-bottom: 30px;
+}
+.hero-action:hover { transform: translateY(-3px); }
+.hero-text h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.hero-text p { margin: 5px 0 0; opacity: 0.9; }
+.hero-icon {
+  background: rgba(255,255,255,0.2);
+  width: 55px; height: 55px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: bold;
+}
+
+/* 2. SECTION HEADER */
+.section-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; margin-top: 10px;
+}
+.section-title { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
+.view-all-link { color: #2563eb; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: none; }
+
+/* 3. DESKTOP GRID */
+.bills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* BILL CARD (Desktop) */
+.bill-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+.bill-card:hover { border-color: #2563eb; box-shadow: 0 8px 15px -3px rgba(0,0,0,0.1); }
+
+.card-preview {
+  height: 200px;
+  background: #f1f5f9;
+  overflow: hidden;
+  padding: 10px;
+  display: flex; justify-content: center;
+  position: relative;
+}
+.mini-bill-wrapper {
+  transform: scale(0.25);
+  transform-origin: top center;
+  width: 210mm; 
+  pointer-events: none; 
+}
+
+.card-footer {
+  padding: 15px;
+  background: white;
+  border-top: 1px solid #f1f5f9;
+}
+.card-row-1 { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.card-client { font-weight: 700; color: #1e293b; font-size: 15px; }
+.card-amount { font-weight: 700; color: #10b981; }
+.card-row-2 { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; }
+
+/* VIEW MORE BUTTON */
+.btn-show-more {
+  display: block; width: 100%; padding: 15px; text-align: center;
+  background: white; color: #2563eb; border: 1px solid #bfdbfe;
+  border-radius: 12px; margin-top: 25px; cursor: pointer; font-weight: 600;
+  transition: 0.2s;
+}
+.btn-show-more:hover { background: #eff6ff; }
+
+/* ========================================= */
+/* 📱 MOBILE LIST VIEW (The Real App Look)   */
+/* ========================================= */
+@media (max-width: 900px) {
+  .home-container { padding: 20px; }
+  
+  .hero-action { padding: 20px; border-radius: 12px; }
+  .hero-text h2 { font-size: 18px; }
+  .hero-icon { width: 45px; height: 45px; font-size: 24px; }
+
+  /* Switch Grid to Column List */
+  .bills-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* List Item Style */
+  .bill-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 15px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  /* Hide Desktop Preview on Mobile */
+  .card-preview { display: none; }
+
+  /* Add Icon for List Item */
+  .bill-card::before {
+    content: "📄";
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px;
+    background: #f1f5f9; border-radius: 8px;
+    font-size: 18px; margin-right: 15px;
+  }
+
+  .card-footer { padding: 0; border: none; flex: 1; }
+  .card-id { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+}

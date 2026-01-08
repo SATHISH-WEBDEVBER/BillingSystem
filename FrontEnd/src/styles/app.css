@@ -1,4 +1,4 @@
-/* --- GLOBAL RESET & VARS --- */
+/* --- GLOBAL RESET --- */
 :root {
   --primary: #2563eb;
   --bg-app: #f1f5f9;
@@ -12,60 +12,111 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   background-color: var(--bg-app);
   color: var(--text-main);
-  overflow-x: hidden; 
-  overflow-y: auto; 
+  overflow: hidden; /* We handle scroll inside specific containers */
 }
 
-/* --- LAYOUT CONTAINER --- */
 .app-layout {
   display: flex;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
 }
 
-/* --- LEFT PANEL (Base Layout) --- */
+/* --- MAIN CONTENT AREA --- */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden; 
+  position: relative;
+  background-color: var(--bg-app);
+}
+
+/* --- SCROLLABLE PAGES (Home, History, Summary) --- */
+.scrollable-page {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto; /* ENABLE SCROLLING */
+  width: 100%;
+  padding-bottom: 80px; /* Space for content not to hit edge */
+}
+
+/* --- FIXED PAGES (Billing Generator) --- */
+/* This container ensures the split view works correctly */
+.fixed-page-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* --- LEFT PANEL (Editor) --- */
 .editor-panel {
-  width: 40%;
-  min-width: 350px;
+  width: 450px;
+  min-width: 400px;
   background: var(--bg-panel);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 100vh; 
-  position: sticky;
-  top: 0;
+  height: 100%;
   z-index: 10;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.05);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.03);
 }
 
 /* --- RIGHT PANEL (Preview) --- */
 .preview-panel {
-  width: 60%;
+  flex: 1;
   background: #525659;
   padding: 40px;
   display: flex;
   justify-content: center;
-  min-height: 100vh;
-  overflow-x: auto; 
+  height: 100%;
+  overflow-y: auto; 
 }
 
-/* RESPONSIVE LAYOUT */
+/* ========================================= */
+/* 📱 MOBILE RESPONSIVE LAYOUT               */
+/* ========================================= */
 @media (max-width: 900px) {
-  .app-layout { flex-direction: column; height: auto; overflow-x: hidden; }
-  .editor-panel { width: 100%; min-width: 0; height: auto; position: relative; border-right: none; box-shadow: none; }
-  .preview-panel { width: 100%; padding: 20px 0; background: #333; overflow: hidden; min-height: 600px; }
+  .app-layout { flex-direction: column; }
+
+  /* Adjust height for Bottom Navbar (60px) */
+  .main-content {
+    height: calc(100vh - 60px); 
+  }
+
+  /* Fix for Billing Generator on Mobile */
+  .fixed-page-container {
+    flex-direction: column;
+    overflow-y: auto; /* Allow scrolling the whole generator on mobile */
+  }
+
+  .editor-panel {
+    width: 100%;
+    min-width: 0;
+    height: auto; /* Allow it to grow */
+    flex: none;
+    border-right: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .preview-panel {
+    width: 100%;
+    height: auto;
+    min-height: 500px;
+    padding: 20px 10px;
+    background: #333;
+    flex: none;
+    overflow: visible;
+  }
 }
 
-@media (max-width: 450px) {
-  .preview-panel { min-height: 500px; padding-top: 10px; }
-}
-
-/* PRINT RULES */
 @media print {
-  body { background: white; height: auto; overflow: visible; }
-  .editor-panel { display: none; }
-  .preview-panel { padding: 0; background: white; display: block; width: 100%; }
+  .editor-panel, .navbar { display: none !important; }
+  .preview-panel { padding: 0; background: white; display: block; width: 100%; height: auto; }
+  .main-content { height: auto; overflow: visible; }
 }

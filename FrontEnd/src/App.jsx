@@ -1,26 +1,42 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import axios from "axios";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { calculateTotals } from "./utils/calculations";
 
-// Component Imports
+// Components
+import Navbar from "./Components/Navbar";
 import BillPreview from "./components/BillPreview";
 import Dashboard from "./components/Dashboard";
 import SuccessPage from "./components/SuccessPage";
+import HomePage from "./Components/HomePage";
+import BillDetail from "./Components/BillDetail";
+import HistoryPage from "./Components/HistoryPage"; // NEW IMPORT
 
 // Global Styles
 import "./styles/app.css"; 
 import "./styles/bill.css"; 
 
 export default function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}
+
+function AppContent() {
+  const navigate = useNavigate();
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-  // --- APP STATE ---
-  const [view, setView] = useState("dashboard"); // 'dashboard' or 'success'
+  // --- STATE ---
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("dashboard"); 
   
-  // Data State
+  const [recentBills, setRecentBills] = useState([]);
+  const [selectedBill, setSelectedBill] = useState(null);
+
   const [billData, setBillData] = useState({
     clientName: "MOHAN",
     clientAddress: "Kavandampatty",
@@ -37,188 +53,167 @@ export default function App() {
 
   const [productCatalog, setProductCatalog] = useState([]);
   
-  // --- INITIAL LOAD ---
-  useEffect(() => {
-    const fetchInitialData = async () => {
+  // --- LOAD DATA ---
+  const fetchAllData = async () => {
       try {
         const prodRes = await axios.get('http://localhost:5000/api/products');
         setProductCatalog(prodRes.data);
-        
         const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
         setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo }));
-        
+        const recentRes = await axios.get('http://localhost:5000/api/bills'); // Gets top 6
+        setRecentBills(recentRes.data);
         setLoading(false);
       } catch (error) {
-        console.error("Backend Error:", error);
+        console.error("Error:", error);
         setLoading(false);
       }
-    };
-    fetchInitialData();
-  }, []);
+  };
+
+  useEffect(() => { fetchAllData(); }, []);
 
   const totals = calculateTotals(items);
 
-  // --- HANDLERS ---
+  // --- ACTIONS ---
   const handleDataChange = (e) => setBillData({ ...billData, [e.target.name]: e.target.value });
-  
   const addItem = () => setItems([...items, { category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
-  
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
 
   const updateItem = (index, field, value) => {
     const updated = [...items];
     updated[index][field] = value;
-    
-    // Logic: Reset fields if category changes
-    if (field === 'category') { 
-        updated[index].desc = ""; 
-        updated[index].rate = ""; 
-        updated[index].unit = ""; 
-    }
-    
-    // Logic: Auto-fill price if item selected
+    if (field === 'category') { updated[index].desc = ""; updated[index].rate = ""; updated[index].unit = ""; }
     if (field === 'desc') {
         const categoryData = productCatalog.find(cat => cat.category === updated[index].category);
         const itemData = categoryData?.items.find(i => i.name === value);
-        if (itemData) { 
-            updated[index].rate = itemData.price; 
-            updated[index].unit = itemData.unit; 
-        }
+        if (itemData) { updated[index].rate = itemData.price; updated[index].unit = itemData.unit; }
     }
-    // Note: If field is 'rate', it updates directly here, allowing manual override
     setItems(updated);
   };
 
-  // --- GENERATE & SAVE (With Price Update Logic) ---
   const handleGenerateBill = async () => {
     try {
-      // 1. Validate: Filter out empty rows
       const validItems = items.filter(item => item.desc && item.desc.trim() !== "");
-      if (validItems.length === 0) return alert("Add at least one product!");
+      if (validItems.length === 0) return alert("Add products!");
 
       const payload = {
         billNo: billData.billNo,
         date: billData.billDate,
-        client: {
-           name: billData.clientName,
-           mobile: billData.clientMobile,
-           address: billData.clientAddress
-        },
+        client: { name: billData.clientName, mobile: billData.clientMobile, address: billData.clientAddress },
         items: validItems.map(i => ({...i, amount: i.qty * i.rate})),
         totals
       };
 
-      // 2. Save the Bill
       await axios.post('http://localhost:5000/api/bills/save', payload);
-
-      // 3. Update Prices in DB (Bulk Update)
-      // This sends the items (with potential manual price changes) to update the DB
       await axios.put('http://localhost:5000/api/products/bulk-update', validItems);
-
-      // 4. Refresh Catalog (So next bill shows the updated price)
-      const prodRes = await axios.get('http://localhost:5000/api/products');
-      setProductCatalog(prodRes.data);
-
+      
+      fetchAllData(); 
       setView("success");
-
     } catch (error) {
-      console.error("Save Error", error);
-      alert("Failed to save bill. Check backend console.");
+      alert("Failed to save.");
     }
   };
 
-  // --- EXPORT ---
-  const handleExport = async (format) => {
-    const element = document.getElementById("bill-preview");
+  const exportBill = async (elementId, format, filename) => {
+    const element = document.getElementById(elementId);
+    if (!element) return;
     const canvas = await html2canvas(element, { scale: 3, useCORS: true });
-
     if (format === 'pdf') {
         const imgData = canvas.toDataURL("image/png");
         const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = 210;
-        const pdfHeight = 297;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Bill-${billData.billNo}.pdf`);
-    } else if (format === 'img') {
+        pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
+        pdf.save(`${filename}.pdf`);
+    } else {
         const link = document.createElement('a');
-        link.download = `Bill-${billData.billNo}.png`;
+        link.download = `${filename}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
     }
   };
 
-  // --- SHARE ---
   const handleShare = async () => {
-    const element = document.getElementById("bill-preview");
+    const element = document.getElementById("bill-preview") || document.getElementById("bill-view-detail");
     const canvas = await html2canvas(element, { scale: 3 });
     canvas.toBlob(async (blob) => {
-      const file = new File([blob], `Bill-${billData.billNo}.png`, { type: 'image/png' });
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: `Bill ${billData.billNo}`,
-            text: `Here is the bill for ${billData.clientName}`,
-            files: [file],
-          });
-        } catch (error) { console.log("Error sharing", error); }
-      } else {
-        alert("Web Share not supported");
-      }
+      const file = new File([blob], `Bill.png`, { type: 'image/png' });
+      if (navigator.share) await navigator.share({ title: `Bill`, files: [file] });
+      else alert("Web Share not supported");
     });
   };
 
-  // --- NEW BILL ---
   const handleNewBill = async () => {
     setLoading(true);
     setItems([{ category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
-    
-    // Fetch the new Next Bill Number
     const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
-    
-    setBillData(prev => ({ 
-        ...prev, 
-        billNo: billRes.data.nextBillNo, 
-        clientName: "", 
-        clientMobile: "" 
-    }));
-    
+    setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo, clientName: "", clientMobile: "" }));
     setView("dashboard");
+    navigate("/billing"); 
     setLoading(false);
   };
 
-  if (loading) return <div style={{padding:"20px"}}>Loading...</div>;
+  const handleViewBill = (bill) => {
+    setSelectedBill(bill);
+    navigate("/bill-detail");
+  };
+
+  if (loading) return <div style={{padding:"20px"}}>Loading App...</div>;
 
   return (
     <div className="app-layout">
-      
-      {/* LEFT PANEL: DASHBOARD / SUCCESS */}
-      <div className="editor-panel">
-        {view === 'dashboard' ? (
-          <Dashboard 
-            billData={billData}
-            handleDataChange={handleDataChange}
-            items={items}
-            updateItem={updateItem}
-            removeItem={removeItem}
-            addItem={addItem}
-            productCatalog={productCatalog}
-            onGenerate={handleGenerateBill}
-          />
-        ) : (
-          <SuccessPage 
-            billNo={billData.billNo}
-            onExport={handleExport}
-            onShare={handleShare}
-            onNewBill={handleNewBill}
-          />
-        )}
-      </div>
+      <Navbar />
+      <div className="main-content">
+        <Routes>
+          <Route path="/" element={
+             <div className="scrollable-page">
+                <HomePage recentBills={recentBills} onNavigate={(page) => navigate("/" + page)} onViewBill={handleViewBill} />
+             </div>
+          } />
 
-      {/* RIGHT PANEL: PREVIEW */}
-      <div className="preview-panel">
-        <BillPreview data={billData} items={items} totals={totals} />
-      </div>
+          <Route path="/billing" element={
+             <div className="fixed-page-container">
+                <div className="editor-panel">
+                  {view === 'dashboard' ? (
+                    <Dashboard 
+                      billData={billData} handleDataChange={handleDataChange} items={items} 
+                      updateItem={updateItem} removeItem={removeItem} addItem={addItem} 
+                      productCatalog={productCatalog} onGenerate={handleGenerateBill}
+                    />
+                  ) : (
+                    <SuccessPage 
+                      billNo={billData.billNo} onExport={(fmt)=>exportBill("bill-preview", fmt, "Bill")} 
+                      onShare={handleShare} onNewBill={handleNewBill}
+                    />
+                  )}
+                </div>
+                <div className="preview-panel">
+                  <BillPreview data={billData} items={items} totals={totals} />
+                </div>
+             </div>
+          } />
 
+          <Route path="/bill-detail" element={
+             selectedBill ? (
+               <BillDetail 
+                  bill={selectedBill} 
+                  onExport={(fmt, id) => exportBill(id, fmt, `Bill-${selectedBill.billNo}`)}
+                  onShare={handleShare}
+                  onGenerateNew={handleNewBill}
+               />
+             ) : <div style={{padding:20}}>No bill selected</div>
+          } />
+
+          {/* HISTORY PAGE (New) */}
+          <Route path="/history" element={
+             <div className="scrollable-page">
+                <HistoryPage onViewBill={handleViewBill} />
+             </div>
+          } />
+
+          {/* PLACEHOLDERS */}
+          <Route path="/return" element={<div className="scrollable-page" style={{padding:40}}><h2>↩️ Returns</h2></div>} />
+          <Route path="/summary" element={<div className="scrollable-page" style={{padding:40}}><h2>📊 Reports</h2></div>} />
+        
+        </Routes>
+      </div>
     </div>
   );
 }
