@@ -6,13 +6,14 @@ import jsPDF from "jspdf";
 import { calculateTotals } from "./utils/calculations";
 
 // Components
-import Navbar from "./Components/Navbar";
+import Navbar from "./components/Navbar";
 import BillPreview from "./components/BillPreview";
 import Dashboard from "./components/Dashboard";
 import SuccessPage from "./components/SuccessPage";
-import HomePage from "./Components/HomePage";
-import BillDetail from "./Components/BillDetail";
-import HistoryPage from "./Components/HistoryPage"; // NEW IMPORT
+import HomePage from "./components/HomePage";
+import BillDetail from "./components/BillDetail";
+import HistoryPage from "./components/HistoryPage"; 
+import Modal from "./components/Modal"; // NEW IMPORT
 
 // Global Styles
 import "./styles/app.css"; 
@@ -33,10 +34,20 @@ function AppContent() {
   // --- STATE ---
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("dashboard"); 
-  
   const [recentBills, setRecentBills] = useState([]);
   const [selectedBill, setSelectedBill] = useState(null);
+  const [editingId, setEditingId] = useState(null); 
 
+  // --- MODAL STATE (Popup) ---
+  const [modal, setModal] = useState({
+    isOpen: false,
+    type: 'success', // 'success' or 'confirm'
+    title: '',
+    message: '',
+    onConfirm: null // Function to run when confirmed
+  });
+
+  // Billing Form State
   const [billData, setBillData] = useState({
     clientName: "MOHAN",
     clientAddress: "Kavandampatty",
@@ -58,9 +69,11 @@ function AppContent() {
       try {
         const prodRes = await axios.get('http://localhost:5000/api/products');
         setProductCatalog(prodRes.data);
-        const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
-        setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo }));
-        const recentRes = await axios.get('http://localhost:5000/api/bills'); // Gets top 6
+        if (!editingId) {
+            const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
+            setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo }));
+        }
+        const recentRes = await axios.get('http://localhost:5000/api/bills');
         setRecentBills(recentRes.data);
         setLoading(false);
       } catch (error) {
@@ -72,6 +85,19 @@ function AppContent() {
   useEffect(() => { fetchAllData(); }, []);
 
   const totals = calculateTotals(items);
+
+  // --- MODAL HELPERS ---
+  const closeModal = () => setModal({ ...modal, isOpen: false });
+  
+  const showSuccessModal = (msg) => {
+    setModal({
+      isOpen: true,
+      type: 'success',
+      title: 'Success!',
+      message: msg,
+      onConfirm: null
+    });
+  };
 
   // --- ACTIONS ---
   const handleDataChange = (e) => setBillData({ ...billData, [e.target.name]: e.target.value });
@@ -90,6 +116,7 @@ function AppContent() {
     setItems(updated);
   };
 
+  // --- GENERATE / UPDATE ---
   const handleGenerateBill = async () => {
     try {
       const validItems = items.filter(item => item.desc && item.desc.trim() !== "");
@@ -103,7 +130,16 @@ function AppContent() {
         totals
       };
 
-      await axios.post('http://localhost:5000/api/bills/save', payload);
+      if (editingId) {
+        // UPDATE Existing
+        await axios.put(`http://localhost:5000/api/bills/update/${editingId}`, payload);
+        // Show Success Popup instead of alert
+        showSuccessModal("Bill details have been updated successfully.");
+      } else {
+        // CREATE New
+        await axios.post('http://localhost:5000/api/bills/save', payload);
+      }
+
       await axios.put('http://localhost:5000/api/products/bulk-update', validItems);
       
       fetchAllData(); 
@@ -111,6 +147,73 @@ function AppContent() {
     } catch (error) {
       alert("Failed to save.");
     }
+  };
+
+  // --- EDIT ---
+  const handleEditBill = (bill) => {
+    setEditingId(bill._id);
+    setBillData({
+        clientName: bill.client.name,
+        clientAddress: bill.client.address || "",
+        clientMobile: bill.client.mobile,
+        billNo: bill.billNo,
+        billDate: bill.date,
+        paymentMode: "Credit",
+        shopMobile: "6385278892"
+    });
+    setItems(bill.items);
+    setView("dashboard");
+    navigate("/billing");
+  };
+
+  // --- DELETE LOGIC (With Modal) ---
+  
+  // 1. Triggered when user clicks "Delete" in UI
+  const requestDeleteBill = (id) => {
+    setModal({
+      isOpen: true,
+      type: 'confirm',
+      title: 'Confirm Deletion',
+      message: 'Are you sure you want to delete this bill? This action cannot be undone.',
+      onConfirm: () => confirmDeleteBill(id) // Pass the specific ID to the confirm function
+    });
+  };
+
+  // 2. Triggered when user clicks "Confirm Delete" in Modal
+  const confirmDeleteBill = async (id) => {
+    try {
+        await axios.delete(`http://localhost:5000/api/bills/delete/${id}`);
+        closeModal(); // Close popup
+        
+        const recentRes = await axios.get('http://localhost:5000/api/bills');
+        setRecentBills(recentRes.data);
+        
+        if (window.location.pathname === '/bill-detail') {
+            navigate('/');
+        } else {
+            fetchAllData();
+        }
+    } catch (error) {
+        closeModal();
+        alert("Failed to delete bill");
+    }
+  };
+
+  // --- OTHER ---
+  const handleNewBill = async () => {
+    setLoading(true);
+    setEditingId(null);
+    setItems([{ category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
+    const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
+    setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo, clientName: "", clientMobile: "" }));
+    setView("dashboard");
+    navigate("/billing"); 
+    setLoading(false);
+  };
+
+  const handleViewBill = (bill) => {
+    setSelectedBill(bill);
+    navigate("/bill-detail");
   };
 
   const exportBill = async (elementId, format, filename) => {
@@ -140,26 +243,23 @@ function AppContent() {
     });
   };
 
-  const handleNewBill = async () => {
-    setLoading(true);
-    setItems([{ category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
-    const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
-    setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo, clientName: "", clientMobile: "" }));
-    setView("dashboard");
-    navigate("/billing"); 
-    setLoading(false);
-  };
-
-  const handleViewBill = (bill) => {
-    setSelectedBill(bill);
-    navigate("/bill-detail");
-  };
-
   if (loading) return <div style={{padding:"20px"}}>Loading App...</div>;
 
   return (
     <div className="app-layout">
+      
       <Navbar />
+
+      {/* GLOBAL POPUP COMPONENT */}
+      <Modal 
+        isOpen={modal.isOpen}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        onConfirm={modal.onConfirm}
+        onClose={closeModal}
+      />
+
       <div className="main-content">
         <Routes>
           <Route path="/" element={
@@ -196,19 +296,18 @@ function AppContent() {
                   bill={selectedBill} 
                   onExport={(fmt, id) => exportBill(id, fmt, `Bill-${selectedBill.billNo}`)}
                   onShare={handleShare}
-                  onGenerateNew={handleNewBill}
+                  onEdit={handleEditBill}
+                  onDelete={requestDeleteBill} // Pass the Wrapper Function that opens Modal
                />
              ) : <div style={{padding:20}}>No bill selected</div>
           } />
 
-          {/* HISTORY PAGE (New) */}
           <Route path="/history" element={
              <div className="scrollable-page">
                 <HistoryPage onViewBill={handleViewBill} />
              </div>
           } />
 
-          {/* PLACEHOLDERS */}
           <Route path="/return" element={<div className="scrollable-page" style={{padding:40}}><h2>↩️ Returns</h2></div>} />
           <Route path="/summary" element={<div className="scrollable-page" style={{padding:40}}><h2>📊 Reports</h2></div>} />
         

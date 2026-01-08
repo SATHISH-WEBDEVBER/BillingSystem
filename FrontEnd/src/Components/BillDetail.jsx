@@ -1,10 +1,10 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // NEW: Routing Hook
+import { useNavigate } from 'react-router-dom';
 import BillPreview from './BillPreview';
 import { Icons } from './Icons';
-import '../styles/detail.css'; // Use new CSS
+import '../styles/detail.css'; 
 
-export default function BillDetail({ bill, onExport, onShare, onGenerateNew }) {
+export default function BillDetail({ bill, onExport, onShare, onEdit, onDelete }) {
   const navigate = useNavigate();
 
   if (!bill) return <div style={{padding:40}}>Loading Bill...</div>;
@@ -22,7 +22,7 @@ export default function BillDetail({ bill, onExport, onShare, onGenerateNew }) {
   return (
     <div className="detail-container">
       
-      {/* 1. PROFESSIONAL HEADER */}
+      {/* HEADER */}
       <div className="detail-header">
         <div className="header-left">
           <button onClick={() => navigate(-1)} className="back-btn">
@@ -35,6 +35,18 @@ export default function BillDetail({ bill, onExport, onShare, onGenerateNew }) {
         </div>
 
         <div className="header-actions">
+          {/* Edit */}
+          <button onClick={() => onEdit(bill)} className="action-btn" style={{color:"#2563eb", borderColor:"#2563eb"}}>
+             Edit Bill
+          </button>
+
+          {/* Delete (Just calls parent function, Modal is handled in App.jsx) */}
+          <button onClick={() => onDelete(bill._id)} className="action-btn" style={{color:"#ef4444", borderColor:"#ef4444"}}>
+             <Icons.Trash /> Delete
+          </button>
+
+          <div style={{width:1, height:20, background:'#e2e8f0', margin:'0 5px'}}></div>
+
           <button onClick={() => onExport('pdf', 'bill-view-detail')} className="action-btn">
             <Icons.PDF /> PDF
           </button>
@@ -44,13 +56,10 @@ export default function BillDetail({ bill, onExport, onShare, onGenerateNew }) {
           <button onClick={onShare} className="action-btn btn-primary">
             <Icons.Share /> Share
           </button>
-          <button onClick={onGenerateNew} className="action-btn" style={{color:"#2563eb", borderColor:"#2563eb"}}>
-            <Icons.Plus /> New Bill
-          </button>
         </div>
       </div>
 
-      {/* 2. CENTERED DOCUMENT VIEW */}
+      {/* DOCUMENT VIEW */}
       <div className="bill-viewport">
         <div id="bill-view-detail" className="document-wrapper">
            <BillPreview data={data} items={bill.items} totals={bill.totals} />
