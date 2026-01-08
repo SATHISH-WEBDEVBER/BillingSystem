@@ -1,0 +1,45 @@
+.bill-container {
+  width: 210mm;
+  height: 297mm;
+  background: white;
+  padding: 10mm;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  flex-shrink: 0; 
+  box-sizing: border-box;
+}
+
+.bill-border { border: 2px solid black; height: 100%; display: flex; flex-direction: column; }
+.bill-header { text-align: center; border-bottom: 1px solid black; padding: 5px; }
+.shop-name { font-size: 24px; font-weight: 900; margin: 5px 0; }
+
+.bill-details { display: flex; border-bottom: 1px solid black; height: 110px; }
+.bill-details .left { width: 60%; padding: 8px; border-right: 1px solid black; }
+.bill-details .right { width: 40%; padding: 8px; }
+.detail-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+
+.table-wrapper { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+.items-table { width: 100%; border-collapse: collapse; z-index: 2; position: relative; }
+.items-table th { border-bottom: 1px solid black; background: #eee; padding: 4px; font-size: 13px; text-align: center; }
+.items-table td { padding: 4px 6px; vertical-align: top; }
+.items-table th, .items-table td { border-right: none; } 
+
+.bill-footer { border-top: 1px solid black; margin-top: auto; z-index: 5; background: white; }
+.totals-row { display: flex; border-bottom: 1px solid black; }
+.totals-row .label { flex: 1; text-align: right; padding: 4px; border-right: 1px solid black; }
+.totals-row .value { width: 100px; text-align: right; padding: 4px; }
+.amount-words { border-bottom: 1px solid black; padding: 5px; font-style: italic; font-size: 12px; }
+
+/* RESPONSIVE SCALING */
+@media (max-width: 900px) {
+  .bill-container { transform: scale(0.55); transform-origin: top center; margin-bottom: -130mm; box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-top: 10px; }
+}
+@media (max-width: 450px) {
+  .bill-container { transform: scale(0.42) !important; margin-bottom: -160mm !important; margin-top: 5px; }
+}
+@media print {
+  .bill-container { margin: 0; box-shadow: none; width: 100%; height: 100%; transform: none; }
+}
