@@ -23,7 +23,67 @@ router.get('/all', async (req, res) => {
   }
 });
 
-// 3. GET NEXT BILL NUMBER
+// 3. GET SALES STATS (FIXED DATE LOGIC)
+router.get('/stats', async (req, res) => {
+  try {
+    const bills = await Bill.find(); 
+    
+    const now = new Date();
+
+    // Helper: Format Date as YYYY-MM-DD (Local Time, No UTC Shift)
+    const toDateString = (dateObj) => {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const todayStr = toDateString(now);
+
+    // Calculate Start of Week (Sunday)
+    const startOfWeekDate = new Date(now);
+    startOfWeekDate.setDate(now.getDate() - now.getDay());
+    const startOfWeekStr = toDateString(startOfWeekDate);
+
+    // Calculate Start of Month (1st)
+    const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfMonthStr = toDateString(startOfMonthDate);
+
+    let stats = {
+      daily: 0,
+      weekly: 0,
+      monthly: 0,
+      totalBills: bills.length
+    };
+
+    bills.forEach(bill => {
+      const billDate = bill.date; // Stored as "YYYY-MM-DD"
+      // Ensure amount is a number
+      const amount = Number(bill.totals.netAmount) || 0;
+
+      // 1. Daily: Exact Match
+      if (billDate === todayStr) {
+        stats.daily += amount;
+      }
+
+      // 2. Weekly: Range Check
+      if (billDate >= startOfWeekStr && billDate <= todayStr) {
+        stats.weekly += amount;
+      }
+
+      // 3. Monthly: Range Check
+      if (billDate >= startOfMonthStr && billDate <= todayStr) {
+        stats.monthly += amount;
+      }
+    });
+
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 4. NEXT BILL NO
 router.get('/next-number', async (req, res) => {
   try {
     let counter = await Counter.findOne({ id: 'billNo' });
@@ -37,43 +97,36 @@ router.get('/next-number', async (req, res) => {
   }
 });
 
-// 4. SAVE NEW BILL (POST)
+// 5. SAVE
 router.post('/save', async (req, res) => {
   const { billNo, date, client, items, totals } = req.body;
   try {
     const newBill = new Bill({ billNo, date, client, items, totals });
     await newBill.save();
-    // Only increment counter for NEW bills
     await Counter.findOneAndUpdate({ id: 'billNo' }, { $inc: { seq: 1 } });
-    res.status(201).json({ message: "Bill Saved Successfully", id: newBill._id });
+    res.status(201).json({ message: "Saved", id: newBill._id });
   } catch (err) {
-    res.status(500).json({ message: "Failed to save bill" });
+    res.status(500).json({ message: "Error saving" });
   }
 });
 
-// 5. UPDATE EXISTING BILL (PUT) - NEW
+// 6. UPDATE
 router.put('/update/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const updatedData = req.body;
-    
-    // Update the bill by ID, do NOT increment counter
-    await Bill.findByIdAndUpdate(id, updatedData, { new: true });
-    
-    res.json({ message: "Bill Updated Successfully" });
+    await Bill.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json({ message: "Updated" });
   } catch (err) {
-    res.status(500).json({ message: "Failed to update bill" });
+    res.status(500).json({ message: "Error updating" });
   }
 });
 
-// 6. DELETE BILL (DELETE) - NEW
+// 7. DELETE
 router.delete('/delete/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    await Bill.findByIdAndDelete(id);
-    res.json({ message: "Bill Deleted Successfully" });
+    await Bill.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete bill" });
+    res.status(500).json({ message: "Error deleting" });
   }
 });
 

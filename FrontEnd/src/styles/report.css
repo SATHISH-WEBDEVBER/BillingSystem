@@ -1,0 +1,149 @@
+/* CONTAINER */
+.report-container {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+}
+
+/* --- MENU SECTION (Selection Cards) --- */
+.report-header-text {
+  text-align: center;
+  margin-bottom: 50px;
+}
+.report-header-text h2 { font-size: 28px; color: #1e293b; margin-bottom: 8px; }
+.report-header-text p { color: #64748b; }
+
+.report-menu {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.report-card-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 30px;
+  width: 280px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  position: relative;
+  overflow: hidden;
+}
+
+.report-card-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  border-color: #3b82f6;
+}
+
+.report-icon {
+  width: 60px; height: 60px;
+  background: #eff6ff; color: #2563eb;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+
+.report-card-btn h3 { margin: 0; font-size: 18px; color: #0f172a; font-weight: 700; }
+.report-card-btn p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.4; }
+
+/* --- BILL STATS DASHBOARD --- */
+.stats-header {
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.back-link {
+  color: #64748b; cursor: pointer; font-weight: 600; font-size: 14px;
+  display: flex; align-items: center; gap: 5px;
+  background: white; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+.back-link:hover { border-color: #cbd5e1; color: #334155; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* SMART STAT CARD */
+.stat-card {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 160px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Accent top border */
+.stat-card::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+}
+.stat-card.daily::before { background: #2563eb; }
+.stat-card.weekly::before { background: #8b5cf6; }
+.stat-card.monthly::before { background: #10b981; }
+
+.stat-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.stat-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-icon-bg { 
+  width: 40px; height: 40px; border-radius: 10px; 
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+
+.daily .stat-icon-bg { background: #eff6ff; color: #2563eb; }
+.weekly .stat-icon-bg { background: #f5f3ff; color: #8b5cf6; }
+.monthly .stat-icon-bg { background: #ecfdf5; color: #10b981; }
+
+.stat-value { 
+  font-size: 36px; 
+  font-weight: 800; 
+  color: #0f172a; 
+  letter-spacing: -1px; 
+  margin-top: 10px;
+}
+
+.stat-footer { font-size: 12px; color: #94a3b8; font-weight: 500; }
+
+/* Empty State */
+.empty-state-product {
+  text-align: center; padding: 80px 20px;
+  background: white; border-radius: 16px; border: 1px dashed #cbd5e1;
+}
+
+/* ========================================= */
+/* 📱 MOBILE RESPONSIVE                      */
+/* ========================================= */
+@media (max-width: 900px) {
+  .report-container { padding: 20px; padding-bottom: 100px; }
+  
+  .report-header-text h2 { font-size: 24px; }
+  .report-card-btn { width: 100%; flex-direction: row; text-align: left; padding: 20px; }
+  .report-icon { width: 50px; height: 50px; font-size: 24px; }
+  
+  /* Stack stats vertically on mobile */
+  .stats-grid { 
+    grid-template-columns: 1fr; 
+    gap: 15px;
+  }
+  
+  .stat-card { height: auto; padding: 20px; }
+  .stat-value { font-size: 32px; }
+}

@@ -8,12 +8,13 @@ import { calculateTotals } from "./utils/calculations";
 // Components
 import Navbar from "./components/Navbar";
 import BillPreview from "./components/BillPreview";
-import Dashboard from "./components/Dashboard";
+import Dashboard from "./Components/Dashboard";
 import SuccessPage from "./components/SuccessPage";
 import HomePage from "./components/HomePage";
 import BillDetail from "./components/BillDetail";
 import HistoryPage from "./components/HistoryPage"; 
-import Modal from "./components/Modal"; // NEW IMPORT
+import ReportPage from "./Components/ReportPage"; // NEW IMPORT
+import Modal from "./components/Modal";
 
 // Global Styles
 import "./styles/app.css"; 
@@ -38,13 +39,13 @@ function AppContent() {
   const [selectedBill, setSelectedBill] = useState(null);
   const [editingId, setEditingId] = useState(null); 
 
-  // --- MODAL STATE (Popup) ---
+  // --- MODAL STATE ---
   const [modal, setModal] = useState({
     isOpen: false,
-    type: 'success', // 'success' or 'confirm'
+    type: 'success',
     title: '',
     message: '',
-    onConfirm: null // Function to run when confirmed
+    onConfirm: null
   });
 
   // Billing Form State
@@ -88,15 +89,8 @@ function AppContent() {
 
   // --- MODAL HELPERS ---
   const closeModal = () => setModal({ ...modal, isOpen: false });
-  
   const showSuccessModal = (msg) => {
-    setModal({
-      isOpen: true,
-      type: 'success',
-      title: 'Success!',
-      message: msg,
-      onConfirm: null
-    });
+    setModal({ isOpen: true, type: 'success', title: 'Success!', message: msg, onConfirm: null });
   };
 
   // --- ACTIONS ---
@@ -131,17 +125,13 @@ function AppContent() {
       };
 
       if (editingId) {
-        // UPDATE Existing
         await axios.put(`http://localhost:5000/api/bills/update/${editingId}`, payload);
-        // Show Success Popup instead of alert
         showSuccessModal("Bill details have been updated successfully.");
       } else {
-        // CREATE New
         await axios.post('http://localhost:5000/api/bills/save', payload);
       }
 
       await axios.put('http://localhost:5000/api/products/bulk-update', validItems);
-      
       fetchAllData(); 
       setView("success");
     } catch (error) {
@@ -149,7 +139,6 @@ function AppContent() {
     }
   };
 
-  // --- EDIT ---
   const handleEditBill = (bill) => {
     setEditingId(bill._id);
     setBillData({
@@ -166,40 +155,30 @@ function AppContent() {
     navigate("/billing");
   };
 
-  // --- DELETE LOGIC (With Modal) ---
-  
-  // 1. Triggered when user clicks "Delete" in UI
   const requestDeleteBill = (id) => {
     setModal({
       isOpen: true,
       type: 'confirm',
       title: 'Confirm Deletion',
       message: 'Are you sure you want to delete this bill? This action cannot be undone.',
-      onConfirm: () => confirmDeleteBill(id) // Pass the specific ID to the confirm function
+      onConfirm: () => confirmDeleteBill(id)
     });
   };
 
-  // 2. Triggered when user clicks "Confirm Delete" in Modal
   const confirmDeleteBill = async (id) => {
     try {
         await axios.delete(`http://localhost:5000/api/bills/delete/${id}`);
-        closeModal(); // Close popup
-        
+        closeModal();
         const recentRes = await axios.get('http://localhost:5000/api/bills');
         setRecentBills(recentRes.data);
-        
-        if (window.location.pathname === '/bill-detail') {
-            navigate('/');
-        } else {
-            fetchAllData();
-        }
+        if (window.location.pathname === '/bill-detail') navigate('/');
+        else fetchAllData();
     } catch (error) {
         closeModal();
         alert("Failed to delete bill");
     }
   };
 
-  // --- OTHER ---
   const handleNewBill = async () => {
     setLoading(true);
     setEditingId(null);
@@ -250,7 +229,6 @@ function AppContent() {
       
       <Navbar />
 
-      {/* GLOBAL POPUP COMPONENT */}
       <Modal 
         isOpen={modal.isOpen}
         type={modal.type}
@@ -297,7 +275,7 @@ function AppContent() {
                   onExport={(fmt, id) => exportBill(id, fmt, `Bill-${selectedBill.billNo}`)}
                   onShare={handleShare}
                   onEdit={handleEditBill}
-                  onDelete={requestDeleteBill} // Pass the Wrapper Function that opens Modal
+                  onDelete={requestDeleteBill}
                />
              ) : <div style={{padding:20}}>No bill selected</div>
           } />
@@ -308,8 +286,14 @@ function AppContent() {
              </div>
           } />
 
+          {/* REPORT PAGE (Updated) */}
+          <Route path="/summary" element={
+             <div className="scrollable-page">
+                <ReportPage />
+             </div>
+          } />
+
           <Route path="/return" element={<div className="scrollable-page" style={{padding:40}}><h2>↩️ Returns</h2></div>} />
-          <Route path="/summary" element={<div className="scrollable-page" style={{padding:40}}><h2>📊 Reports</h2></div>} />
         
         </Routes>
       </div>
