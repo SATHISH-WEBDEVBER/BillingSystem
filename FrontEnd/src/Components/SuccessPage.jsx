@@ -1,51 +1,47 @@
-import React from 'react';
-import { Icons } from './Icons';
-import '../styles/success.css'; 
+import React from "react";
+import { Icons } from "./Icons";
+import '../styles/success.css';  
 
-export default function SuccessPage({ billNo, onExport, onShare, onNewBill }) {
+export default function SuccessPage({ 
+  billNo, 
+  onExport, 
+  onShare, 
+  onNewBill, 
+  title = "Bill Saved Successfully", // Default title
+  subtitle // Optional custom subtitle
+}) {
   return (
-    <div className="success-wrapper">
-      <div className="success-card">
-        <div className="success-icon-box">
-          <Icons.Check />
+    <div className="success-container">
+      <div className="success-icon-wrapper">
+        <Icons.Check style={{ width: 40, height: 40, color: '#16a34a' }} />
+      </div>
+      
+      <h2 className="success-title">{title}</h2>
+      <p className="success-subtitle">
+        {subtitle || `Bill #${billNo} has been saved to database.`}
+      </p>
+
+      <div className="success-actions">
+        <div className="action-label">📂 EXPORT</div>
+        <div className="action-row">
+          <button onClick={() => onExport('pdf')} className="btn-outline">
+            <Icons.PDF /> PDF
+          </button>
+          <button onClick={() => onExport('img')} className="btn-outline">
+            <Icons.Image /> Image
+          </button>
         </div>
-        <h3 style={{margin: "0 0 5px 0", color:"#166534"}}>Bill Saved Successfully</h3>
-        <p style={{ color: "#64748b", margin: "0 0 20px 0", fontSize:"14px" }}>
-          Bill <b>#{billNo}</b> has been saved to database.
-        </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-          
-          {/* Export */}
-          <div className="action-box">
-            <h4 className="box-title">📂 Export</h4>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => onExport('pdf')} className="btn-action">
-                <Icons.PDF /> PDF
-              </button>
-              <button onClick={() => onExport('img')} className="btn-action">
-                <Icons.Image /> Image
-              </button>
-            </div>
-          </div>
+        <div className="action-label">🔗 SHARE</div>
+        <button onClick={onShare} className="btn-full-blue">
+          <Icons.Share /> Share Receipt
+        </button>
 
-          {/* Share */}
-          <div className="action-box">
-            <h4 className="box-title">🔗 Share</h4>
-            <button onClick={onShare} className="btn-blue">
-              <Icons.Share /> Share Bill
-            </button>
-          </div>
-
-          {/* Next */}
-          <div className="action-box">
-            <h4 className="box-title">✨ Next</h4>
-            <button onClick={onNewBill} className="btn-black">
-              <Icons.Refresh /> Create New Bill
-            </button>
-          </div>
-
-        </div>
+        <div className="action-label">✨ NEXT</div>
+        {/* Dynamic button text based on context */}
+        <button onClick={onNewBill} className="btn-full-dark">
+          <Icons.Plus /> {title.includes("Return") ? "Create New Return" : "Create New Bill"}
+        </button>
       </div>
     </div>
   );

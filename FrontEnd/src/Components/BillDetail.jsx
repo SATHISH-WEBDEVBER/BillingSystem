@@ -2,22 +2,33 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import BillPreview from './BillPreview';
 import { Icons } from './Icons';
-import '../styles/detail.css'; 
+import '../styles/detail.css';
 
 export default function BillDetail({ bill, onExport, onShare, onEdit, onDelete }) {
   const navigate = useNavigate();
 
-  if (!bill) return <div style={{padding:40}}>Loading Bill...</div>;
+  if (!bill) return null;
 
-  const data = {
-    billNo: bill.billNo,
-    billDate: bill.date,
+  // --- LOGIC: Detect if this is a Return or a Normal Bill ---
+  const isReturn = bill.returnId !== undefined;
+  
+  // Normalize Data for Display
+  const displayData = {
+    id: isReturn ? bill.returnId : bill.billNo,
+    type: isReturn ? "Return Note" : "Invoice",
+    date: isReturn ? bill.returnDate : bill.date,
+    client: bill.client.name,
+    // Map fields for BillPreview
+    billNo: isReturn ? bill.returnId : bill.billNo,
+    billDate: isReturn ? bill.returnDate : bill.date,
     clientName: bill.client.name,
-    clientAddress: bill.client.address,
     clientMobile: bill.client.mobile,
-    paymentMode: "Credit",
+    clientAddress: bill.client.address,
+    paymentMode: isReturn ? "Return Note" : "Credit", 
     shopMobile: "6385278892"
   };
+
+  const elementId = "detail-preview-content";
 
   return (
     <div className="detail-container">
@@ -25,44 +36,47 @@ export default function BillDetail({ bill, onExport, onShare, onEdit, onDelete }
       {/* HEADER */}
       <div className="detail-header">
         <div className="header-left">
-          <button onClick={() => navigate(-1)} className="back-btn">
-             ← Back
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <span>←</span> Back
           </button>
           <div>
-            <h2 className="bill-title">Invoice #{bill.billNo}</h2>
-            <p className="bill-subtitle">{bill.client.name} • {bill.date}</p>
+            <h2 className="bill-title">{displayData.type} #{displayData.id}</h2>
+            <p className="bill-subtitle">{displayData.client} • {displayData.date}</p>
           </div>
         </div>
 
         <div className="header-actions">
-          {/* Edit */}
-          <button onClick={() => onEdit(bill)} className="action-btn" style={{color:"#2563eb", borderColor:"#2563eb"}}>
-             Edit Bill
+          {/* Edit Button - Now available for Returns too */}
+          <button className="action-btn" onClick={() => onEdit(bill)}>
+            <span style={{color:'#2563eb'}}>✎</span> Edit
+          </button>
+          
+          <button className="action-btn" onClick={() => onDelete(bill._id)} style={{color:'#dc2626', borderColor:'#fecaca'}}>
+            <span>🗑️</span> Delete
           </button>
 
-          {/* Delete (Just calls parent function, Modal is handled in App.jsx) */}
-          <button onClick={() => onDelete(bill._id)} className="action-btn" style={{color:"#ef4444", borderColor:"#ef4444"}}>
-             <Icons.Trash /> Delete
-          </button>
+          <div style={{width:'1px', background:'#e2e8f0', margin:'0 5px'}}></div>
 
-          <div style={{width:1, height:20, background:'#e2e8f0', margin:'0 5px'}}></div>
-
-          <button onClick={() => onExport('pdf', 'bill-view-detail')} className="action-btn">
+          <button className="action-btn" onClick={() => onExport('pdf', elementId)}>
             <Icons.PDF /> PDF
           </button>
-          <button onClick={() => onExport('img', 'bill-view-detail')} className="action-btn">
+          <button className="action-btn" onClick={() => onExport('img', elementId)}>
             <Icons.Image /> Image
           </button>
-          <button onClick={onShare} className="action-btn btn-primary">
+          <button className="action-btn btn-primary" onClick={onShare}>
             <Icons.Share /> Share
           </button>
         </div>
       </div>
 
-      {/* DOCUMENT VIEW */}
+      {/* VIEWPORT */}
       <div className="bill-viewport">
-        <div id="bill-view-detail" className="document-wrapper">
-           <BillPreview data={data} items={bill.items} totals={bill.totals} />
+        <div id={elementId} className="document-wrapper">
+          <BillPreview 
+            data={displayData} 
+            items={bill.items} 
+            totals={bill.totals} 
+          />
         </div>
       </div>
 

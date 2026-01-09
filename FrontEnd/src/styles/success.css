@@ -1,12 +1,144 @@
-.success-wrapper { height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 40px; text-align: center; background: #f0fdf4; }
-.success-card { background: white; padding: 30px; border-radius: 12px; border: 1px solid #bbf7d0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.success-icon-box { width: 60px; height: 60px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: #16a34a; }
+/* --- SUCCESS PAGE UI (Matches the Professional Design) --- */
 
-.action-box { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; }
-.box-title { margin: 0 0 10px 0; font-size: 14px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; text-align: left; }
+/* The Main Container in the Left Panel */
+.success-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: #ffffff; /* Clean White Background */
+  text-align: center;
+  animation: fadeIn 0.4s ease-out;
+}
 
-.btn-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border-radius: 6px; border: 1px solid #d1d5db; background: white; cursor: pointer; font-weight: 500; }
-.btn-action:hover { background: #f8fafc; }
+/* Green Checkmark Circle */
+.success-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background-color: #dcfce7; /* Light Green */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
 
-.btn-blue { background: #2563eb; color: white; border: none; width: 100%; padding: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
-.btn-black { background: #1e293b; color: white; border: none; width: 100%; padding: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
+/* Title Text */
+.success-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #166534; /* Dark Green */
+  margin: 0 0 8px 0;
+}
+
+/* Subtitle Text */
+.success-subtitle {
+  font-size: 14px;
+  color: #64748b; /* Slate Gray */
+  margin: 0 0 32px 0;
+}
+
+/* Actions Container (The buttons area) */
+.success-actions {
+  width: 100%;
+  max-width: 320px; /* Keep buttons strictly contained */
+  text-align: left;
+}
+
+/* Small Uppercase Labels (EXPORT, SHARE, NEXT) */
+.action-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  margin-top: 20px;
+}
+/* Remove top margin for the first label */
+.action-label:first-child { margin-top: 0; }
+
+/* Row for side-by-side buttons (PDF / Image) */
+.action-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+/* --- BUTTON STYLES --- */
+
+/* 1. Outline Button (PDF/Image) */
+.btn-outline {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #334155;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-outline:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+/* 2. Full Blue Button (Share) */
+.btn-full-blue {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background-color: #2563eb; /* Bright Blue */
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+.btn-full-blue:hover {
+  background-color: #1d4ed8;
+}
+
+/* 3. Full Dark Button (Create New) */
+.btn-full-dark {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  background-color: #1e293b; /* Dark Slate */
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
+}
+.btn-full-dark:hover {
+  background-color: #0f172a;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

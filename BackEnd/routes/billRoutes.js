@@ -23,14 +23,42 @@ router.get('/all', async (req, res) => {
   }
 });
 
-// 3. GET SALES STATS (FIXED DATE LOGIC)
+// --- FIXED: FIND BILL BY NUMBER ---
+router.get('/find/:billNo', async (req, res) => {
+  try {
+    // Get the text "7" from the URL
+    const searchInput = req.params.billNo.trim();
+    
+    // Convert it to a real Number: 7
+    const billNoNum = parseInt(searchInput);
+
+    // Safety check: make sure it's a valid number
+    if (isNaN(billNoNum)) {
+        return res.status(400).json({ message: "Invalid Bill Number provided" });
+    }
+
+    // Search for the Number 7 in the DB.
+    // Since the model is now 'Number', this will match correctly.
+    const bill = await Bill.findOne({ billNo: billNoNum });
+    
+    if (!bill) {
+        // If this still happens, it means the number truly isn't in the DB.
+        return res.status(404).json({ message: "Bill not found in database" });
+    }
+    
+    res.json(bill);
+  } catch (err) {
+    console.error("Search Error:", err);
+    res.status(500).json({ message: "Server error searching for bill" });
+  }
+});
+
+// 3. GET SALES STATS
 router.get('/stats', async (req, res) => {
   try {
     const bills = await Bill.find(); 
-    
     const now = new Date();
-
-    // Helper: Format Date as YYYY-MM-DD (Local Time, No UTC Shift)
+    
     const toDateString = (dateObj) => {
       const y = dateObj.getFullYear();
       const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -39,42 +67,21 @@ router.get('/stats', async (req, res) => {
     };
 
     const todayStr = toDateString(now);
-
-    // Calculate Start of Week (Sunday)
     const startOfWeekDate = new Date(now);
     startOfWeekDate.setDate(now.getDate() - now.getDay());
     const startOfWeekStr = toDateString(startOfWeekDate);
-
-    // Calculate Start of Month (1st)
     const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfMonthStr = toDateString(startOfMonthDate);
 
-    let stats = {
-      daily: 0,
-      weekly: 0,
-      monthly: 0,
-      totalBills: bills.length
-    };
+    let stats = { daily: 0, weekly: 0, monthly: 0, totalBills: bills.length };
 
     bills.forEach(bill => {
-      const billDate = bill.date; // Stored as "YYYY-MM-DD"
-      // Ensure amount is a number
+      const billDate = bill.date;
       const amount = Number(bill.totals.netAmount) || 0;
 
-      // 1. Daily: Exact Match
-      if (billDate === todayStr) {
-        stats.daily += amount;
-      }
-
-      // 2. Weekly: Range Check
-      if (billDate >= startOfWeekStr && billDate <= todayStr) {
-        stats.weekly += amount;
-      }
-
-      // 3. Monthly: Range Check
-      if (billDate >= startOfMonthStr && billDate <= todayStr) {
-        stats.monthly += amount;
-      }
+      if (billDate === todayStr) stats.daily += amount;
+      if (billDate >= startOfWeekStr && billDate <= todayStr) stats.weekly += amount;
+      if (billDate >= startOfMonthStr && billDate <= todayStr) stats.monthly += amount;
     });
 
     res.json(stats);
@@ -101,7 +108,8 @@ router.get('/next-number', async (req, res) => {
 router.post('/save', async (req, res) => {
   const { billNo, date, client, items, totals } = req.body;
   try {
-    const newBill = new Bill({ billNo, date, client, items, totals });
+    // Ensure billNo is saved as a number
+    const newBill = new Bill({ ...req.body, billNo: Number(billNo) });
     await newBill.save();
     await Counter.findOneAndUpdate({ id: 'billNo' }, { $inc: { seq: 1 } });
     res.status(201).json({ message: "Saved", id: newBill._id });
