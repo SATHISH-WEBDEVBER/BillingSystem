@@ -2,7 +2,7 @@ import React from 'react';
 import BillPreview from './BillPreview';
 import '../styles/home.css';
 
-export default function HomePage({ recentBills, recentReturns, onNavigate, onViewBill }) {
+export default function HomePage({ recentBills, recentReturns, recentUpdated, onNavigate, onViewBill }) {
   
   return (
     <div className="home-container">
@@ -16,89 +16,55 @@ export default function HomePage({ recentBills, recentReturns, onNavigate, onVie
         <div className="hero-icon">+</div>
       </div>
 
-      {/* --- SECTION 1: RECENT BILLS --- */}
+      {/* 1. RECENT BILLS */}
       <div className="section-header">
         <h3 className="section-title">Recent Bills</h3>
-        <button className="view-all-link" onClick={() => onNavigate('history', { state: { tab: 'new' } })}>
-            View All
-        </button>
+        <button className="view-all-link" onClick={() => onNavigate('history', { state: { tab: 'new' } })}>View All</button>
       </div>
-
       <div className="bills-grid">
-        {recentBills.length > 0 ? recentBills.map((bill) => {
-          const previewData = {
-            billNo: bill.billNo,
-            billDate: bill.date,
-            clientName: bill.client.name,
-            clientAddress: bill.client.address,
-            clientMobile: bill.client.mobile,
-            paymentMode: "Credit",
-            shopMobile: "6385278892"
-          };
-
-          return (
+        {recentBills.length > 0 ? recentBills.map((bill) => (
             <div key={bill._id} className="bill-card" onClick={() => onViewBill(bill)}>
-              <div className="card-preview">
-                <div className="mini-bill-wrapper">
-                  <BillPreview data={previewData} items={bill.items} totals={bill.totals} />
-                </div>
-              </div>
+              <div className="card-preview"><div className="mini-bill-wrapper"><BillPreview data={{...bill, billDate: bill.date, clientName: bill.client.name, paymentMode: "Credit", shopMobile: "6385278892"}} items={bill.items} totals={bill.totals} /></div></div>
               <div className="card-footer">
-                <div className="card-row-1">
-                    <span className="card-client">{bill.client.name}</span>
-                    <span className="card-amount">₹{bill.totals?.netAmount || "0"}</span>
-                </div>
-                <div className="card-row-2">
-                    <span className="card-id">#{bill.billNo}</span>
-                    <span>{bill.date}</span>
-                </div>
+                <div className="card-row-1"><span className="card-client">{bill.client.name}</span><span className="card-amount">₹{bill.totals?.netAmount}</span></div>
+                <div className="card-row-2"><span className="card-id">#{bill.billNo}</span><span>{bill.date}</span></div>
               </div>
             </div>
-          );
-        }) : <div style={{color:'#94a3b8', fontStyle:'italic'}}>No bills generated yet.</div>}
+        )) : <div style={{color:'#94a3b8'}}>No bills yet.</div>}
       </div>
 
-      {/* --- SECTION 2: RECENT RETURNS --- */}
+      {/* 2. RECENT RETURNS */}
       <div className="section-header" style={{marginTop:'40px'}}>
         <h3 className="section-title">Recent Returns</h3>
-        <button className="view-all-link" onClick={() => onNavigate('history', { state: { tab: 'return' } })}>
-            View All
-        </button>
+        <button className="view-all-link" onClick={() => onNavigate('history', { state: { tab: 'return' } })}>View All</button>
       </div>
-
       <div className="bills-grid">
-        {recentReturns && recentReturns.length > 0 ? recentReturns.map((ret) => {
-          const previewData = {
-            billNo: ret.returnId,
-            billDate: ret.returnDate,
-            clientName: ret.client.name,
-            clientAddress: ret.client.address,
-            clientMobile: ret.client.mobile,
-            paymentMode: "Return Note",
-            shopMobile: "6385278892"
-          };
-
-          return (
-            // ADDED onClick HERE
+        {recentReturns.length > 0 ? recentReturns.map((ret) => (
             <div key={ret._id} className="bill-card" onClick={() => onViewBill(ret)}>
-              <div className="card-preview">
-                <div className="mini-bill-wrapper">
-                  <BillPreview data={previewData} items={ret.items} totals={ret.totals} />
-                </div>
-              </div>
+              <div className="card-preview"><div className="mini-bill-wrapper"><BillPreview data={{billNo: ret.returnId, billDate: ret.returnDate, clientName: ret.client.name, paymentMode: "Return Note", shopMobile: "6385278892"}} items={ret.items} totals={ret.totals} /></div></div>
               <div className="card-footer" style={{borderTop:'2px solid #f87171'}}>
-                <div className="card-row-1">
-                    <span className="card-client">{ret.client.name}</span>
-                    <span className="card-amount" style={{color:'#dc2626'}}>- ₹{ret.totals?.netAmount || "0"}</span>
-                </div>
-                <div className="card-row-2">
-                    <span className="card-id" style={{background:'#fef2f2', color:'#991b1b'}}>Ret #{ret.returnId}</span>
-                    <span>{ret.returnDate}</span>
-                </div>
+                <div className="card-row-1"><span className="card-client">{ret.client.name}</span><span style={{color:'#dc2626'}}>- ₹{ret.totals?.netAmount}</span></div>
+                <div className="card-row-2"><span className="card-id" style={{background:'#fef2f2', color:'#991b1b'}}>Ret #{ret.returnId}</span><span>{ret.returnDate}</span></div>
               </div>
             </div>
-          );
-        }) : <div style={{color:'#94a3b8', fontStyle:'italic', padding:'20px', border:'1px dashed #ccc', borderRadius:'8px', width:'100%'}}>No return bills found.</div>}
+        )) : <div style={{color:'#94a3b8'}}>No returns yet.</div>}
+      </div>
+
+      {/* 3. RECENT UPDATED BILLS (NEW) */}
+      <div className="section-header" style={{marginTop:'40px'}}>
+        <h3 className="section-title">Updated Final Bills</h3>
+        <button className="view-all-link" onClick={() => onNavigate('history', { state: { tab: 'updated' } })}>View All</button>
+      </div>
+      <div className="bills-grid">
+        {recentUpdated && recentUpdated.length > 0 ? recentUpdated.map((upd) => (
+            <div key={upd._id} className="bill-card" onClick={() => onViewBill(upd)}>
+              <div className="card-preview"><div className="mini-bill-wrapper"><BillPreview data={{billNo: upd.updatedBillId, billDate: upd.date, clientName: upd.client.name, paymentMode: "Final Bill", shopMobile: "6385278892"}} items={upd.items} totals={upd.totals} /></div></div>
+              <div className="card-footer" style={{borderTop:'2px solid #3b82f6'}}>
+                <div className="card-row-1"><span className="card-client">{upd.client.name}</span><span style={{color:'#2563eb'}}>₹{upd.totals?.netAmount}</span></div>
+                <div className="card-row-2"><span className="card-id" style={{background:'#eff6ff', color:'#1d4ed8'}}>{upd.updatedBillId}</span><span>{upd.date}</span></div>
+              </div>
+            </div>
+        )) : <div style={{color:'#94a3b8'}}>No updated bills yet.</div>}
       </div>
       
     </div>

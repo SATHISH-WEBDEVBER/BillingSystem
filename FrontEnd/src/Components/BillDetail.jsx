@@ -6,25 +6,24 @@ import '../styles/detail.css';
 
 export default function BillDetail({ bill, onExport, onShare, onEdit, onDelete }) {
   const navigate = useNavigate();
-
   if (!bill) return null;
 
-  // --- LOGIC: Detect if this is a Return or a Normal Bill ---
-  const isReturn = bill.returnId !== undefined;
+  // --- LOGIC: Detect Type ---
+  const isUpdated = bill.updatedBillId !== undefined;
+  const isReturn = bill.returnId !== undefined && !isUpdated;
   
-  // Normalize Data for Display
+  const id = isUpdated ? bill.updatedBillId : (isReturn ? bill.returnId : bill.billNo);
+  const type = isUpdated ? "Updated Bill" : (isReturn ? "Return Note" : "Invoice");
+  const date = bill.date || bill.returnDate; // Updated Bill uses 'date'
+
+  // Map for Preview
   const displayData = {
-    id: isReturn ? bill.returnId : bill.billNo,
-    type: isReturn ? "Return Note" : "Invoice",
-    date: isReturn ? bill.returnDate : bill.date,
-    client: bill.client.name,
-    // Map fields for BillPreview
-    billNo: isReturn ? bill.returnId : bill.billNo,
-    billDate: isReturn ? bill.returnDate : bill.date,
+    billNo: id,
+    billDate: date,
     clientName: bill.client.name,
     clientMobile: bill.client.mobile,
     clientAddress: bill.client.address,
-    paymentMode: isReturn ? "Return Note" : "Credit", 
+    paymentMode: isUpdated ? "Final Bill" : (isReturn ? "Return Note" : "Credit"), 
     shopMobile: "6385278892"
   };
 
@@ -32,54 +31,37 @@ export default function BillDetail({ bill, onExport, onShare, onEdit, onDelete }
 
   return (
     <div className="detail-container">
-      
-      {/* HEADER */}
       <div className="detail-header">
         <div className="header-left">
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            <span>←</span> Back
-          </button>
+          <button className="back-btn" onClick={() => navigate(-1)}><span>←</span> Back</button>
           <div>
-            <h2 className="bill-title">{displayData.type} #{displayData.id}</h2>
-            <p className="bill-subtitle">{displayData.client} • {displayData.date}</p>
+            <h2 className="bill-title">{type} #{id}</h2>
+            <p className="bill-subtitle">{bill.client.name} • {date}</p>
           </div>
         </div>
 
         <div className="header-actions">
-          {/* Edit Button - Now available for Returns too */}
-          <button className="action-btn" onClick={() => onEdit(bill)}>
-            <span style={{color:'#2563eb'}}>✎</span> Edit
-          </button>
+          {/* Edit/Delete forbidden for Updated Bills (Auto-generated) */}
+          {!isUpdated && !isReturn && <button className="action-btn" onClick={() => onEdit(bill)}><span style={{color:'#2563eb'}}>✎</span> Edit</button>}
           
-          <button className="action-btn" onClick={() => onDelete(bill._id)} style={{color:'#dc2626', borderColor:'#fecaca'}}>
-            <span>🗑️</span> Delete
-          </button>
+          {/* Edit for Return Bills */}
+          {isReturn && <button className="action-btn" onClick={() => onEdit(bill)}><span style={{color:'#2563eb'}}>✎</span> Edit</button>}
+
+          {/* Delete allowed for Normal & Return (Updated deleted automatically) */}
+          {!isUpdated && <button className="action-btn" onClick={() => onDelete(bill._id)} style={{color:'#dc2626', borderColor:'#fecaca'}}><span>🗑️</span> Delete</button>}
 
           <div style={{width:'1px', background:'#e2e8f0', margin:'0 5px'}}></div>
-
-          <button className="action-btn" onClick={() => onExport('pdf', elementId)}>
-            <Icons.PDF /> PDF
-          </button>
-          <button className="action-btn" onClick={() => onExport('img', elementId)}>
-            <Icons.Image /> Image
-          </button>
-          <button className="action-btn btn-primary" onClick={onShare}>
-            <Icons.Share /> Share
-          </button>
+          <button className="action-btn" onClick={() => onExport('pdf', elementId)}><Icons.PDF /> PDF</button>
+          <button className="action-btn" onClick={() => onExport('img', elementId)}><Icons.Image /> Image</button>
+          <button className="action-btn btn-primary" onClick={onShare}><Icons.Share /> Share</button>
         </div>
       </div>
 
-      {/* VIEWPORT */}
       <div className="bill-viewport">
         <div id={elementId} className="document-wrapper">
-          <BillPreview 
-            data={displayData} 
-            items={bill.items} 
-            totals={bill.totals} 
-          />
+          <BillPreview data={displayData} items={bill.items} totals={bill.totals} />
         </div>
       </div>
-
     </div>
   );
 }

@@ -22,7 +22,7 @@ export default function BillPreview({ data, items, totals }) {
         {/* HEADER */}
         <div className="bill-header">
             <div style={{ textAlign: "right", fontSize: "10px" }}>CELL: 9842545324, 9842723032</div>
-            <h1 className="shop-name">BHAKAVATHI AMMAN TRADERS</h1>
+            <h1 className="shop-name">MAKKAL SANDHAI</h1>
             <p style={{margin:"2px 0", fontSize:"12px"}}>38 F4, NAINAMPATTI ROAD STREET, OPP GOVT HOSPITAL</p>
             <p style={{margin:"2px 0", fontSize:"12px"}}>EDAPPADI - 637105</p>
             <h3 style={{textDecoration:"underline", margin:"5px 0", fontSize:"16px"}}>ESTIMATE CR</h3>
@@ -32,8 +32,8 @@ export default function BillPreview({ data, items, totals }) {
         <div className="bill-details">
           <div className="left">
             <div>To. <strong>{data.clientName}</strong></div>
-            <div style={{marginLeft:"15px", fontSize:"13px"}}>{data.clientAddress}</div>
-            <div style={{marginLeft:"15px", fontSize:"13px"}}>{data.clientCity}</div>
+            <div style={{marginLeft:"35px", fontSize:"13px"}}>{data.clientAddress}</div>
+            <div style={{marginLeft:"35px", fontSize:"13px"}}>{data.clientCity}</div>
             <br />
             <div>Cell No: <strong>{data.clientMobile}</strong></div>
           </div>
