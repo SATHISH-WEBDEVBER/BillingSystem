@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { calculateTotals } from '../utils/calculations';
 import { Icons } from './Icons';
 import EditorProductRow from './EditorProductRow';
 import '../styles/dashboard.css'; 
@@ -13,12 +12,35 @@ export default function ReturnDashboard({
   setReturnData, 
   returnItems, 
   setReturnItems,
-  onReturnExists // New Prop from App.jsx
+  onReturnExists 
 }) {
   const [searchBillNo, setSearchBillNo] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // --- 1. SEARCH LOGIC (Updated) ---
+  // Store original items to allow "Restore" functionality
+  const [originalBillItems, setOriginalBillItems] = useState([]);
+  const [selectedRestoreItem, setSelectedRestoreItem] = useState("");
+
+  // --- 1. AUTO-LOAD ORIGINAL ITEMS (Fix for Edit Mode) ---
+  useEffect(() => {
+    const fetchOriginalItems = async () => {
+      // If we have a Bill No (e.g. Editing) but no backup items yet
+      if (returnData.originalBillNo && originalBillItems.length === 0) {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/bills/find/${returnData.originalBillNo}`);
+          if (res.data && res.data.items) {
+            setOriginalBillItems(res.data.items);
+          }
+        } catch (error) {
+          console.error("Failed to load original items for restoration:", error);
+        }
+      }
+    };
+    
+    fetchOriginalItems();
+  }, [returnData.originalBillNo, originalBillItems.length]);
+
+  // --- 2. SEARCH LOGIC ---
   const handleSearch = async () => {
     if (!searchBillNo) return onError("Please enter a Bill Number.");
     
@@ -29,7 +51,6 @@ export default function ReturnDashboard({
       
       if (checkRes.data.exists) {
         setLoading(false);
-        // Trigger the parent modal logic
         onReturnExists(checkRes.data.returnBill);
         return; 
       }
@@ -45,18 +66,22 @@ export default function ReturnDashboard({
         clientMobile: bill.client.mobile,
         clientAddress: bill.client.address
       }));
+      
       setReturnItems(bill.items);
+      // Backup for restoration
+      setOriginalBillItems(bill.items);
       
     } catch (error) {
       console.error("Search failed:", error);
       onError("Bill not found! Please check the number and try again.");
       setReturnItems([]);
       setReturnData(prev => ({...prev, originalBillNo: ""}));
+      setOriginalBillItems([]);
     }
     setLoading(false);
   };
 
-  // --- 2. ITEM HELPERS ---
+  // --- 3. HELPERS ---
   const updateItem = (index, field, value) => {
     const updated = [...returnItems];
     updated[index][field] = value;
@@ -68,10 +93,30 @@ export default function ReturnDashboard({
     setReturnItems(updated);
   };
 
+  // Restore logic: Adds item back from original list
+  const handleRestoreItem = () => {
+    if (!selectedRestoreItem) return;
+
+    // Find the item in the original list
+    const itemToAdd = originalBillItems.find(item => item._id === selectedRestoreItem);
+    
+    if (itemToAdd) {
+        // Add clone to active list
+        setReturnItems([...returnItems, { ...itemToAdd }]);
+        setSelectedRestoreItem(""); 
+    }
+  };
+
   const handleGenerate = () => {
     if (returnItems.length === 0) return onError("No items selected for return.");
     onGenerateReturn(); 
   };
+
+  // Filter: Show items in dropdown ONLY if they are missing from the current return list
+  // Uses 'desc' (Name) to match, ensuring it works even if IDs changed during save
+  const availableToRestore = originalBillItems.filter(
+    ogItem => !returnItems.some(rItem => rItem.desc === ogItem.desc)
+  );
 
   return (
     <>
@@ -128,6 +173,38 @@ export default function ReturnDashboard({
                     </div>
                 </div>
 
+                {/* RESTORE SECTION: Only visible if items are missing */}
+                <div className="form-group" style={{background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px dashed #cbd5e1'}}>
+                    <div className="form-section-title" style={{marginBottom: '10px', color: '#475569'}}>Add Product from Invoice</div>
+                    <div style={{display: 'flex', gap: '10px'}}>
+                        <select 
+                            value={selectedRestoreItem} 
+                            onChange={(e) => setSelectedRestoreItem(e.target.value)}
+                            style={{flex: 1}}
+                        >
+                            <option value="">Select product to restore...</option>
+                            {availableToRestore.map(item => (
+                                <option key={item._id} value={item._id}>
+                                    {item.desc}
+                                </option>
+                            ))}
+                        </select>
+                        <button 
+                            onClick={handleRestoreItem} 
+                            className="btn-primary" 
+                            style={{width: 'auto', padding: '0 20px', background: '#3b82f6'}}
+                            disabled={!selectedRestoreItem}
+                        >
+                            Add
+                        </button>
+                    </div>
+                    {availableToRestore.length === 0 && (
+                        <div style={{fontSize: '11px', color: '#94a3b8', marginTop: '5px'}}>
+                            All original products are currently in the list.
+                        </div>
+                    )}
+                </div>
+
                 <div className="form-group">
                     <div className="form-section-title" style={{display:'flex', justifyContent:'space-between'}}>
                         <span>Return Items</span>
@@ -147,7 +224,7 @@ export default function ReturnDashboard({
                     
                     {returnItems.length === 0 && (
                         <div style={{padding:'20px', textAlign:'center', color:'#dc2626', background:'#fef2f2', borderRadius:'8px'}}>
-                            No items left. Please reload bill if needed.
+                            No items left. Use the box above to add products back.
                         </div>
                     )}
                 </div>
