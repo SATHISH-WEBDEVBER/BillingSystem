@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 
 const returnBillSchema = new mongoose.Schema({
-  returnId: { type: Number, required: true, unique: true }, // Sequence for returns (e.g., 1, 2, 3...)
-  originalBillNo: { type: String, required: true }, // Link to original bill
+  // CHANGED: String type to support "RB001"
+  returnId: { type: String, required: true, unique: true },
+  originalBillNo: { type: String, required: true }, // Links to "NB001"
   returnDate: { type: String, required: true },
   client: {
     name: String,

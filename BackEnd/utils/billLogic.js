@@ -4,27 +4,24 @@ const UpdatedBill = require('../models/UpdatedBill');
 
 const recalculateUpdatedBill = async (billNoInput) => {
   try {
-    const billNo = parseInt(billNoInput);
-    if (isNaN(billNo)) return;
+    // 1. Fetch Original Bill (NBxxx)
+    const original = await Bill.findOne({ billNo: billNoInput });
+    
+    // 2. Fetch Return Bill (RBxxx) - Derived from logic
+    const returnIdTarget = billNoInput.replace("NB", "RB");
+    const ret = await ReturnBill.findOne({ returnId: returnIdTarget });
 
-    // 1. Fetch Original & Return Bills
-    const original = await Bill.findOne({ billNo: billNo });
-    const ret = await ReturnBill.findOne({ 
-      $or: [{ originalBillNo: String(billNo) }, { originalBillNo: billNo }] 
-    });
-
-    // 2. If either is missing, delete the Updated Bill (it's invalid)
+    // 3. If either missing, delete Updated Bill (UBxxx)
     if (!original || !ret) {
-      await UpdatedBill.findOneAndDelete({ originalBillNo: billNo });
-      console.log(`Updated Bill for #${billNo} deleted (Parent missing).`);
+      await UpdatedBill.findOneAndDelete({ originalBillNo: billNoInput });
+      console.log(`Updated Bill for ${billNoInput} deleted/not created.`);
       return;
     }
 
-    // 3. Calculate Remaining Items
+    // 4. Calculate Logic
     const newItems = [];
     
     original.items.forEach(origItem => {
-      // Find matching return item by description
       const retItem = ret.items.find(r => r.desc === origItem.desc);
       const returnQty = retItem ? retItem.qty : 0;
       const remainingQty = origItem.qty - returnQty;
@@ -38,16 +35,17 @@ const recalculateUpdatedBill = async (billNoInput) => {
       }
     });
 
-    // 4. Calculate Totals
     const subTotal = newItems.reduce((acc, item) => acc + item.amount, 0);
     const netAmount = subTotal;
 
-    // 5. Save/Update
+    // 5. Generate UB ID (e.g. NB007 -> UB007)
+    const updatedId = billNoInput.replace("NB", "UB");
+
     await UpdatedBill.findOneAndUpdate(
-      { originalBillNo: billNo },
+      { originalBillNo: billNoInput },
       {
-        updatedBillId: `UPD-${billNo}`,
-        originalBillNo: billNo,
+        updatedBillId: updatedId,
+        originalBillNo: billNoInput,
         returnId: ret.returnId,
         date: new Date().toISOString().split('T')[0],
         client: original.client,
@@ -60,7 +58,7 @@ const recalculateUpdatedBill = async (billNoInput) => {
       },
       { upsert: true, new: true }
     );
-    console.log(`Updated Bill for #${billNo} generated.`);
+    console.log(`Updated Bill ${updatedId} generated.`);
 
   } catch (error) {
     console.error("Logic Error:", error);

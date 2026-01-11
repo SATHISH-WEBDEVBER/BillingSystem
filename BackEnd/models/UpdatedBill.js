@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
 const updatedBillSchema = new mongoose.Schema({
-  updatedBillId: { type: String, required: true, unique: true }, // e.g. "UPD-15"
-  originalBillNo: { type: Number, required: true },
-  returnId: { type: Number, required: true },
+  // CHANGED: String type to support "UB001"
+  updatedBillId: { type: String, required: true, unique: true },
+  originalBillNo: { type: String, required: true },
+  returnId: { type: String, required: true },
   date: { type: String, required: true },
   client: {
     name: String,

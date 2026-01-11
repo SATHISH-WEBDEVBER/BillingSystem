@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const billSchema = new mongoose.Schema({
-  // CRITICAL FIX: Changed type from String to Number to match your DB data.
-  billNo: { type: Number, required: true, unique: true },
+  // CHANGED: String type to support "NB001"
+  billNo: { type: String, required: true, unique: true },
   date: { type: String, required: true },
   client: {
     name: String,
