@@ -33,60 +33,25 @@ function AppContent() {
   const navigate = useNavigate();
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-  // --- STATE ---
   const [loading, setLoading] = useState(true);
-  
-  // View States
   const [view, setView] = useState("dashboard");       
   const [returnView, setReturnView] = useState("dashboard"); 
   
-  // Data States
   const [recentBills, setRecentBills] = useState([]);
   const [recentReturns, setRecentReturns] = useState([]); 
   const [recentUpdated, setRecentUpdated] = useState([]); 
-  
   const [selectedBill, setSelectedBill] = useState(null); 
   const [editingId, setEditingId] = useState(null); 
-
-  // Store Success Snapshot (Bill No + Client)
   const [successData, setSuccessData] = useState(null);
-
-  // Refresh Trigger
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
+  const [modal, setModal] = useState({ isOpen: false, type: 'success', title: '', message: '', onConfirm: null, confirmText:'Confirm', cancelText:'Cancel' });
 
-  // Modal
-  const [modal, setModal] = useState({
-    isOpen: false, type: 'success', title: '', message: '', onConfirm: null, confirmText:'Confirm', cancelText:'Cancel'
-  });
-
-  // --- FORMS ---
-  const [billData, setBillData] = useState({ 
-    clientName: "",          
-    clientAddress: "",       
-    clientMobile: "",        
-    billNo: "", 
-    billDate: getTodayDate(), 
-    paymentMode: "Credit", 
-    shopMobile: "6385278892" 
-  });
-
+  const [billData, setBillData] = useState({ clientName: "", clientAddress: "", clientMobile: "", billNo: "", billDate: getTodayDate(), paymentMode: "Credit", shopMobile: "6385278892" });
   const [items, setItems] = useState([ { category: "", desc: "", qty: "", rate: "", unit: "Pcs" } ]);
-  
-  const [returnBillData, setReturnBillData] = useState({ 
-    returnId: "", 
-    originalBillNo: "", 
-    returnDate: getTodayDate(), 
-    clientName: "", 
-    clientMobile: "", 
-    clientAddress: "", 
-    shopMobile: "6385278892", 
-    paymentMode: "Return Note" 
-  });
-  
+  const [returnBillData, setReturnBillData] = useState({ returnId: "", originalBillNo: "", returnDate: getTodayDate(), clientName: "", clientMobile: "", clientAddress: "", shopMobile: "6385278892", paymentMode: "Return Note" });
   const [returnItems, setReturnItems] = useState([]);
   const [productCatalog, setProductCatalog] = useState([]);
   
-  // --- LOAD DATA ---
   const fetchAllData = async () => {
       try {
         const prodRes = await axios.get('http://localhost:5000/api/products');
@@ -96,33 +61,19 @@ function AppContent() {
             const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
             setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo }));
         }
-        if (!editingId || (editingId && !returnBillData.returnId)) {
-            const returnRes = await axios.get('http://localhost:5000/api/returns/next-number');
-            setReturnBillData(prev => ({ ...prev, returnId: returnRes.data.nextReturnId }));
-        }
-
+        
         const recentRes = await axios.get('http://localhost:5000/api/bills');
         setRecentBills(recentRes.data);
-
         const recentRetRes = await axios.get('http://localhost:5000/api/returns');
         setRecentReturns(recentRetRes.data);
-
         const updRes = await axios.get('http://localhost:5000/api/updated');
         setRecentUpdated(updRes.data);
-
         setLoading(false);
-      } catch (error) {
-        console.error("Error:", error);
-        setLoading(false);
-      }
+      } catch (error) { console.error("Error:", error); setLoading(false); }
   };
 
   useEffect(() => { fetchAllData(); }, [refreshTrigger]);
-
-  const triggerRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
+  const triggerRefresh = () => { setRefreshTrigger(prev => prev + 1); };
   const totals = calculateTotals(items);
   const returnTotals = calculateTotals(returnItems);
   const closeModal = () => setModal({ ...modal, isOpen: false });
@@ -132,20 +83,18 @@ function AppContent() {
   const handleReturnExists = (existingReturn) => {
     setModal({
       isOpen: true, type: 'choice', title: 'Return Already Generated',
-      message: `A return bill for Invoice #${existingReturn.originalBillNo} already exists.`,
+      message: `A return bill for ${existingReturn.originalBillNo} already exists.`,
       cancelText: 'Go Back', confirmText: 'View Return Bill',
       onConfirm: () => { closeModal(); handleViewBill(existingReturn); },
       onClose: closeModal
     });
   };
 
-  // --- FORM HELPERS ---
   const handleDataChange = (e) => setBillData({ ...billData, [e.target.name]: e.target.value });
   const addItem = () => setItems([...items, { category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
   const updateItem = (index, field, value) => {
-    const updated = [...items];
-    updated[index][field] = value;
+    const updated = [...items]; updated[index][field] = value;
     if (field === 'category') { updated[index].desc = ""; updated[index].rate = ""; updated[index].unit = ""; }
     if (field === 'desc') {
         const categoryData = productCatalog.find(cat => cat.category === updated[index].category);
@@ -155,105 +104,61 @@ function AppContent() {
     setItems(updated);
   };
 
-  // --- GENERATE NORMAL BILL (STRICT VALIDATION) ---
   const handleGenerateBill = async () => {
     try {
-      // 1. Identify rows that have a product description
       const activeItems = items.filter(item => item.desc && item.desc.trim() !== "");
-      
       if (activeItems.length === 0) return showErrorModal("Please add at least one product.");
-
-      // 2. STRICT CHECK: Check if ANY active item is missing quantity
       const invalidItems = activeItems.filter(item => !item.qty || Number(item.qty) <= 0);
+      if (invalidItems.length > 0) return showErrorModal("Every product must have a quantity.");
 
-      // If even ONE item has bad quantity, STOP everything
-      if (invalidItems.length > 0) {
-        return showErrorModal("Every product must have a quantity. Please check your items.");
-      }
-
-      // 3. CAPTURE SNAPSHOT
       const currentBillNo = billData.billNo;
       const currentClient = billData.clientName || "Client";
 
-      // 4. Update state to be clean (removes completely empty rows)
       setItems(activeItems); 
       const finalTotals = calculateTotals(activeItems);
 
-      const payload = { 
-        billNo: billData.billNo, 
-        date: billData.billDate, 
-        client: { name: billData.clientName, mobile: billData.clientMobile, address: billData.clientAddress }, 
-        items: activeItems.map(i => ({...i, amount: i.qty * i.rate})), 
-        totals: finalTotals 
-      };
+      const payload = { billNo: billData.billNo, date: billData.billDate, client: { name: billData.clientName, mobile: billData.clientMobile, address: billData.clientAddress }, items: activeItems.map(i => ({...i, amount: i.qty * i.rate})), totals: finalTotals };
       
       if (editingId) await axios.put(`http://localhost:5000/api/bills/update/${editingId}`, payload);
       else await axios.post('http://localhost:5000/api/bills/save', payload);
       
       await axios.put('http://localhost:5000/api/products/bulk-update', activeItems);
-      
       setSuccessData({ billNo: currentBillNo, clientName: currentClient });
-      triggerRefresh(); 
-      setView("success");
+      triggerRefresh(); setView("success");
     } catch (error) { showErrorModal("Failed to save bill."); }
   };
 
-  // --- GENERATE RETURN BILL (STRICT VALIDATION) ---
   const handleGenerateReturn = async () => {
     try {
       if (returnItems.length === 0) return showErrorModal("No items selected for return.");
-
-      // 1. STRICT CHECK: Check if ANY return item is missing quantity
       const invalidReturnItems = returnItems.filter(item => !item.qty || Number(item.qty) <= 0);
+      if (invalidReturnItems.length > 0) return showErrorModal("Every return item must have a quantity.");
 
-      if (invalidReturnItems.length > 0) {
-        return showErrorModal("Every return item must have a quantity. Please check your items.");
-      }
-
-      // CAPTURE SNAPSHOT
       const currentReturnId = returnBillData.returnId;
       const currentClient = returnBillData.clientName || "Client";
-
-      // Update state to be clean
-      setReturnItems(returnItems); // returnItems are already filtered/selected in dashboard
+      setReturnItems(returnItems); 
       const finalReturnTotals = calculateTotals(returnItems);
 
-      const payload = { 
-        originalBillNo: returnBillData.originalBillNo, 
-        returnDate: returnBillData.returnDate, 
-        client: { name: returnBillData.clientName, mobile: returnBillData.clientMobile, address: returnBillData.clientAddress }, 
-        items: returnItems.map(i => ({...i, amount: i.qty * i.rate})), 
-        totals: finalReturnTotals 
-      };
+      const payload = { originalBillNo: returnBillData.originalBillNo, returnDate: returnBillData.returnDate, client: { name: returnBillData.clientName, mobile: returnBillData.clientMobile, address: returnBillData.clientAddress }, items: returnItems.map(i => ({...i, amount: i.qty * i.rate})), totals: finalReturnTotals };
       
       if (editingId) await axios.put(`http://localhost:5000/api/returns/update/${editingId}`, payload);
       else await axios.post('http://localhost:5000/api/returns/save', payload);
       
       setSuccessData({ billNo: currentReturnId, clientName: currentClient });
-      triggerRefresh(); 
-      setReturnView("success"); 
+      triggerRefresh(); setReturnView("success"); 
     } catch (error) { showErrorModal("Failed to save return bill"); }
   };
 
-  // --- ACTIONS ---
   const handleNewReturn = async () => {
     setLoading(true); setEditingId(null); setReturnItems([]);
-    setReturnBillData(prev => ({...prev, originalBillNo: "", clientName: "", clientMobile: "", clientAddress: ""}));
-    const returnRes = await axios.get('http://localhost:5000/api/returns/next-number');
-    setReturnBillData(prev => ({ ...prev, returnId: returnRes.data.nextReturnId }));
+    setReturnBillData(prev => ({...prev, returnId: "", originalBillNo: "", clientName: "", clientMobile: "", clientAddress: ""}));
     setReturnView("dashboard"); setLoading(false);
   };
 
   const handleNewBill = async () => {
     setLoading(true); setEditingId(null); setItems([{ category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
     const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
-    setBillData({ 
-        clientName: "", clientAddress: "", clientMobile: "", 
-        billNo: billRes.data.nextBillNo, 
-        billDate: getTodayDate(), 
-        paymentMode: "Credit", 
-        shopMobile: "6385278892" 
-    });
+    setBillData({ clientName: "", clientAddress: "", clientMobile: "", billNo: billRes.data.nextBillNo, billDate: getTodayDate(), paymentMode: "Credit", shopMobile: "6385278892" });
     setView("dashboard"); navigate("/billing"); setLoading(false);
   };
 
@@ -271,7 +176,6 @@ function AppContent() {
   };
 
   const requestDeleteBill = (id) => { setModal({ isOpen: true, type: 'confirm', title: 'Confirm Deletion', message: 'Are you sure?', onConfirm: () => confirmDeleteBill(id) }); };
-  
   const confirmDeleteBill = async (id) => {
     try {
         if (selectedBill && selectedBill.returnId) await axios.delete(`http://localhost:5000/api/returns/delete/${id}`);
@@ -281,22 +185,66 @@ function AppContent() {
     } catch (error) { closeModal(); showErrorModal("Failed to delete record"); }
   };
 
+  // --- FIXED A4 EXPORT FOR MOBILE & DESKTOP ---
   const exportBill = async (elementId, format, filename) => {
     const element = document.getElementById(elementId);
     if (!element) return;
-    const canvas = await html2canvas(element, { scale: 3, useCORS: true });
-    if (format === 'pdf') { 
-        const imgData = canvas.toDataURL("image/png"); 
-        const pdf = new jsPDF("p", "mm", "a4"); 
-        pdf.addImage(imgData, "PNG", 0, 0, 210, 297); 
-        pdf.save(`${filename}.pdf`); 
-    } else { 
-        const link = document.createElement('a'); 
-        link.download = `${filename}.png`; 
-        link.href = canvas.toDataURL("image/png"); 
-        link.click(); 
+
+    // 1. Create a CLONE of the bill (invisible to user)
+    const clone = element.cloneNode(true);
+    
+    // 2. Style the clone to be perfect A4 and invisible
+    Object.assign(clone.style, {
+      position: 'fixed',
+      top: '-10000px',
+      left: '-10000px',
+      transform: 'none', // Remove any scaling
+      margin: '0',
+      width: '210mm',
+      height: '297mm',
+      boxShadow: 'none',
+      zIndex: '9999',
+      backgroundColor: 'white'
+    });
+
+    document.body.appendChild(clone);
+
+    try {
+      // 3. Capture the CLONE
+      // FIX: 'windowWidth: 1600' forces the capture to think it's on a Desktop
+      // This ensures the Mobile CSS (media queries) are IGNORED.
+      const canvas = await html2canvas(clone, { 
+          scale: 3, // High Resolution
+          useCORS: true,
+          logging: false,
+          windowWidth: 1600, // Force Desktop Width
+          width: clone.scrollWidth,
+          height: clone.scrollHeight
+      });
+
+      if (format === 'pdf') { 
+          const imgData = canvas.toDataURL("image/png"); 
+          const pdf = new jsPDF("p", "mm", "a4"); 
+          const pdfWidth = 210; 
+          const pdfHeight = 297; 
+          
+          // 4. Fill the PDF perfectly
+          pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight); 
+          pdf.save(`${filename}.pdf`); 
+      } else { 
+          const link = document.createElement('a'); 
+          link.download = `${filename}.png`; 
+          link.href = canvas.toDataURL("image/png"); 
+          link.click(); 
+      }
+    } catch (error) {
+      console.error("Export Failed:", error);
+    } finally {
+      // 5. Cleanup
+      document.body.removeChild(clone);
     }
   };
+
   const handleShare = async () => { const element = document.getElementById("bill-preview") || document.getElementById("detail-preview-content") || document.getElementById("return-preview"); const canvas = await html2canvas(element, { scale: 3 }); canvas.toBlob(async (blob) => { const file = new File([blob], `Bill.png`, { type: 'image/png' }); if (navigator.share) await navigator.share({ title: `Bill`, files: [file] }); else alert("Web Share not supported"); }); };
 
   if (loading) return <div style={{padding:"20px"}}>Loading App...</div>;
@@ -306,7 +254,7 @@ function AppContent() {
   return (
     <div className="app-layout">
       <Navbar />
-      <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={closeModal} />
+      <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={closeModal} confirmText={modal.confirmText} cancelText={modal.cancelText}/>
 
       <div className="main-content">
         <Routes>
@@ -318,20 +266,11 @@ function AppContent() {
                   {view === 'dashboard' ? (
                     <Dashboard billData={billData} handleDataChange={handleDataChange} items={items} updateItem={updateItem} removeItem={removeItem} addItem={addItem} productCatalog={productCatalog} onGenerate={handleGenerateBill} />
                   ) : (
-                    <SuccessPage 
-                        billNo={successData?.billNo} 
-                        onExport={(fmt)=>exportBill("bill-preview", fmt, `${successData?.clientName}-${successData?.billNo}`)} 
-                        onShare={handleShare} 
-                        onNewBill={handleNewBill} 
-                    />
+                    <SuccessPage billNo={successData?.billNo} onExport={(fmt)=>exportBill("bill-preview", fmt, `${successData?.clientName}-${successData?.billNo}`)} onShare={handleShare} onNewBill={handleNewBill} />
                   )}
                 </div>
                 <div className="preview-panel">
-                  <BillPreview 
-                    data={view === 'success' ? { ...billData, billNo: successData?.billNo, clientName: successData?.clientName } : billData} 
-                    items={items} 
-                    totals={totals} 
-                  />
+                  <BillPreview data={view === 'success' ? { ...billData, billNo: successData?.billNo, clientName: successData?.clientName } : billData} items={items} totals={totals} />
                 </div>
              </div>
           } />
@@ -344,39 +283,14 @@ function AppContent() {
              <div className="fixed-page-container">
                 <div className="editor-panel">
                    {returnView === 'dashboard' ? (
-                     <ReturnDashboard 
-                        productCatalog={productCatalog}
-                        onGenerateReturn={handleGenerateReturn}
-                        onError={showErrorModal} 
-                        returnData={returnBillData}
-                        setReturnData={setReturnBillData}
-                        returnItems={returnItems}
-                        setReturnItems={setReturnItems}
-                        onReturnExists={handleReturnExists}
-                     />
+                     <ReturnDashboard productCatalog={productCatalog} onGenerateReturn={handleGenerateReturn} onError={showErrorModal} returnData={returnBillData} setReturnData={setReturnBillData} returnItems={returnItems} setReturnItems={setReturnItems} onReturnExists={handleReturnExists} />
                    ) : (
-                     <SuccessPage 
-                        title="Return Saved Successfully"
-                        subtitle={`Return Bill #${successData?.billNo} saved.`}
-                        billNo={successData?.billNo}
-                        onExport={(fmt)=>exportBill("return-preview", fmt, `${successData?.clientName}-${successData?.billNo}`)}
-                        onShare={handleShare}
-                        onNewBill={handleNewReturn}
-                     />
+                     <SuccessPage title="Return Saved Successfully" subtitle={`Return Bill #${successData?.billNo} saved.`} billNo={successData?.billNo} onExport={(fmt)=>exportBill("return-preview", fmt, `${successData?.clientName}-${successData?.billNo}`)} onShare={handleShare} onNewBill={handleNewReturn} />
                    )}
                 </div>
-                <div className="preview-panel">
-                   <div id="return-preview">
-                        <BillPreview 
-                            data={returnView === 'success' ? { ...returnPreviewData, billNo: successData?.billNo, clientName: successData?.clientName } : returnPreviewData} 
-                            items={returnItems} 
-                            totals={returnTotals} 
-                        />
-                   </div>
-                </div>
+                <div className="preview-panel"><div id="return-preview"><BillPreview data={returnView === 'success' ? { ...returnPreviewData, billNo: successData?.billNo, clientName: successData?.clientName } : returnPreviewData} items={returnItems} totals={returnTotals} /></div></div>
              </div>
           } />
-        
         </Routes>
       </div>
     </div>

@@ -89,12 +89,16 @@
   .bill-viewport {
     padding: 10px;
     align-items: flex-start; /* Align top on mobile */
+    overflow-x: hidden; /* Prevent accidental horizontal scroll */
   }
 
-  /* Scale document to fit mobile screen width */
+  /* FIXED: Removed 'transform: scale' here because bill.css already scales the content.
+     This stops the "Double Shrinking" issue. */
   .document-wrapper {
-    transform: scale(0.45); /* Force scale down */
-    transform-origin: top center;
-    margin-bottom: -150mm; /* Fix whitespace caused by scaling */
+    transform: none; 
+    margin-bottom: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 }
