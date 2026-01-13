@@ -2,18 +2,24 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../styles/report.css';
 
+// The main ReportPage component handling Business Analytics views
 export default function ReportPage() {
+  // State to toggle between different report views ('menu', 'bill', 'product')
   const [view, setView] = useState('menu'); // 'menu', 'bill', 'product'
+  // State to store sales statistics fetched from the backend
   const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0 });
+  // State to handle loading status during API calls
   const [loading, setLoading] = useState(false);
 
   // Fetch Stats Only when entering Bill View
+  // Optimization: Data is only requested when the user actually opens the "Sales Reports" section
   useEffect(() => {
     if (view === 'bill') {
       fetchStats();
     }
   }, [view]);
 
+  // Async function to call the backend API and get sales totals
   const fetchStats = async () => {
     setLoading(true);
     try {
@@ -26,6 +32,7 @@ export default function ReportPage() {
   };
 
   // Helper for "Smart Money" Format (No decimals, Indian Format)
+  // Formats numbers like 12000 to "₹12,000" without decimal points for cleaner UI
   const formatMoney = (amount) => {
     return amount.toLocaleString('en-IN', {
       style: 'currency',
@@ -36,6 +43,7 @@ export default function ReportPage() {
   };
 
   // --- 1. MAIN MENU VIEW ---
+  // The initial landing screen of the Reports page showing navigation options
   if (view === 'menu') {
     return (
       <div className="report-container">
@@ -46,6 +54,7 @@ export default function ReportPage() {
 
         <div className="report-menu">
           
+          {/* Card to navigate to Sales Reports */}
           <div className="report-card-btn" onClick={() => setView('bill')}>
             <div className="report-icon">📊</div>
             <div>
@@ -54,6 +63,7 @@ export default function ReportPage() {
             </div>
           </div>
 
+          {/* Card to navigate to Inventory Reports */}
           <div className="report-card-btn" onClick={() => setView('product')}>
             <div className="report-icon">📦</div>
             <div>
@@ -68,9 +78,11 @@ export default function ReportPage() {
   }
 
   // --- 2. BILL STATS VIEW (Smart Dashboard) ---
+  // The detailed view displaying financial statistics (Daily, Weekly, Monthly)
   if (view === 'bill') {
     return (
       <div className="report-container">
+        {/* Navigation header to go back to the menu */}
         <div className="stats-header">
           <button className="back-link" onClick={() => setView('menu')}>
             ← Dashboard
@@ -78,12 +90,13 @@ export default function ReportPage() {
           <h2 style={{margin:0, fontSize:"20px"}}>Sales Overview</h2>
         </div>
 
+        {/* Conditional rendering: Show loading text while fetching data */}
         {loading ? (
           <div style={{textAlign:'center', padding:40, color:'#64748b'}}>Calculating sales data...</div>
         ) : (
           <div className="stats-grid">
             
-            {/* Today */}
+            {/* Today's Sales Card */}
             <div className="stat-card daily">
               <div className="stat-header">
                 <span className="stat-label">Today's Sales</span>
@@ -93,7 +106,7 @@ export default function ReportPage() {
               <div className="stat-footer">Updated just now</div>
             </div>
 
-            {/* Weekly */}
+            {/* Weekly Sales Card */}
             <div className="stat-card weekly">
               <div className="stat-header">
                 <span className="stat-label">This Week</span>
@@ -103,7 +116,7 @@ export default function ReportPage() {
               <div className="stat-footer">Current week performance</div>
             </div>
 
-            {/* Monthly */}
+            {/* Monthly Sales Card */}
             <div className="stat-card monthly">
               <div className="stat-header">
                 <span className="stat-label">This Month</span>
@@ -120,6 +133,7 @@ export default function ReportPage() {
   }
 
   // --- 3. PRODUCT VIEW (Placeholder) ---
+  // Currently a "Coming Soon" screen for future inventory features
   if (view === 'product') {
     return (
       <div className="report-container">
@@ -139,5 +153,6 @@ export default function ReportPage() {
     );
   }
 
+  // Fallback return (should technically not be reached given logic above)
   return null;
 }

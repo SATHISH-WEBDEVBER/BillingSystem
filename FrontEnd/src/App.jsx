@@ -23,40 +23,57 @@ import "./styles/bill.css";
 
 export default function App() {
   return (
+    // Wrap the entire app in Router to enable navigation
     <Router>
       <AppContent />
     </Router>
   );
 }
 
+// Main application logic separated to allow using 'useNavigate' hook
 function AppContent() {
   const navigate = useNavigate();
+  // Utility to get today's date in YYYY-MM-DD format
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
   const [loading, setLoading] = useState(true);
+  
+  // View states to toggle between editing and success screens
   const [view, setView] = useState("dashboard");       
   const [returnView, setReturnView] = useState("dashboard"); 
   
+  // Data states for dashboard lists
   const [recentBills, setRecentBills] = useState([]);
   const [recentReturns, setRecentReturns] = useState([]); 
   const [recentUpdated, setRecentUpdated] = useState([]); 
+  
+  // State for managing selected item in detail view and editing
   const [selectedBill, setSelectedBill] = useState(null); 
   const [editingId, setEditingId] = useState(null); 
+  
   const [successData, setSuccessData] = useState(null);
+  // Trigger to force re-fetching data (e.g., after save/delete)
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
+  
+  // Global modal state
   const [modal, setModal] = useState({ isOpen: false, type: 'success', title: '', message: '', onConfirm: null, confirmText:'Confirm', cancelText:'Cancel' });
 
+  // Form states for creating new bills
   const [billData, setBillData] = useState({ clientName: "", clientAddress: "", clientMobile: "", billNo: "", billDate: getTodayDate(), paymentMode: "Credit", shopMobile: "6385278892" });
   const [items, setItems] = useState([ { category: "", desc: "", qty: "", rate: "", unit: "Pcs" } ]);
+  
+  // Form states for return bills
   const [returnBillData, setReturnBillData] = useState({ returnId: "", originalBillNo: "", returnDate: getTodayDate(), clientName: "", clientMobile: "", clientAddress: "", shopMobile: "6385278892", paymentMode: "Return Note" });
   const [returnItems, setReturnItems] = useState([]);
   const [productCatalog, setProductCatalog] = useState([]);
   
+  // Fetch initial data (Products, Dashboard Stats, Next Bill No)
   const fetchAllData = async () => {
       try {
         const prodRes = await axios.get('http://localhost:5000/api/products');
         setProductCatalog(prodRes.data);
         
+        // Only fetch next bill number if creating a new bill (not editing)
         if (!editingId) {
             const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
             setBillData(prev => ({ ...prev, billNo: billRes.data.nextBillNo }));
@@ -73,13 +90,19 @@ function AppContent() {
   };
 
   useEffect(() => { fetchAllData(); }, [refreshTrigger]);
+  
   const triggerRefresh = () => { setRefreshTrigger(prev => prev + 1); };
+  
+  // Real-time calculation of bill totals
   const totals = calculateTotals(items);
   const returnTotals = calculateTotals(returnItems);
+  
+  // Modal Helpers
   const closeModal = () => setModal({ ...modal, isOpen: false });
   const showSuccessModal = (msg) => setModal({ isOpen: true, type: 'success', title: 'Success!', message: msg, onConfirm: null });
   const showErrorModal = (msg) => setModal({ isOpen: true, type: 'error', title: 'Error', message: msg, onConfirm: closeModal });
 
+  // Handle case where user tries to return a bill that was already returned
   const handleReturnExists = (existingReturn) => {
     setModal({
       isOpen: true, type: 'choice', title: 'Return Already Generated',
@@ -90,9 +113,12 @@ function AppContent() {
     });
   };
 
+  // Form Handlers
   const handleDataChange = (e) => setBillData({ ...billData, [e.target.name]: e.target.value });
   const addItem = () => setItems([...items, { category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
+  
+  // Update item in list. If Product is selected, auto-fill price/unit.
   const updateItem = (index, field, value) => {
     const updated = [...items]; updated[index][field] = value;
     if (field === 'category') { updated[index].desc = ""; updated[index].rate = ""; updated[index].unit = ""; }
@@ -104,10 +130,13 @@ function AppContent() {
     setItems(updated);
   };
 
+  // Logic to save a bill (Create or Update)
   const handleGenerateBill = async () => {
     try {
+      // Filter out empty rows
       const activeItems = items.filter(item => item.desc && item.desc.trim() !== "");
       if (activeItems.length === 0) return showErrorModal("Please add at least one product.");
+      // Validate quantities
       const invalidItems = activeItems.filter(item => !item.qty || Number(item.qty) <= 0);
       if (invalidItems.length > 0) return showErrorModal("Every product must have a quantity.");
 
@@ -119,15 +148,19 @@ function AppContent() {
 
       const payload = { billNo: billData.billNo, date: billData.billDate, client: { name: billData.clientName, mobile: billData.clientMobile, address: billData.clientAddress }, items: activeItems.map(i => ({...i, amount: i.qty * i.rate})), totals: finalTotals };
       
+      // Send to backend
       if (editingId) await axios.put(`http://localhost:5000/api/bills/update/${editingId}`, payload);
       else await axios.post('http://localhost:5000/api/bills/save', payload);
       
+      // Update inventory prices
       await axios.put('http://localhost:5000/api/products/bulk-update', activeItems);
+      
       setSuccessData({ billNo: currentBillNo, clientName: currentClient });
       triggerRefresh(); setView("success");
     } catch (error) { showErrorModal("Failed to save bill."); }
   };
 
+  // Logic to save a return transaction
   const handleGenerateReturn = async () => {
     try {
       if (returnItems.length === 0) return showErrorModal("No items selected for return.");
@@ -149,12 +182,14 @@ function AppContent() {
     } catch (error) { showErrorModal("Failed to save return bill"); }
   };
 
+  // Reset state for creating a new return
   const handleNewReturn = async () => {
     setLoading(true); setEditingId(null); setReturnItems([]);
     setReturnBillData(prev => ({...prev, returnId: "", originalBillNo: "", clientName: "", clientMobile: "", clientAddress: ""}));
     setReturnView("dashboard"); setLoading(false);
   };
 
+  // Reset state for creating a new bill
   const handleNewBill = async () => {
     setLoading(true); setEditingId(null); setItems([{ category: "", desc: "", qty: "", rate: "", unit: "Pcs" }]);
     const billRes = await axios.get('http://localhost:5000/api/bills/next-number');
@@ -162,8 +197,10 @@ function AppContent() {
     setView("dashboard"); navigate("/billing"); setLoading(false);
   };
 
+  // Navigation Handlers
   const handleViewBill = (bill) => { setSelectedBill(bill); navigate("/bill-detail"); };
   
+  // Populate form with existing data for editing
   const handleEditBill = (bill) => {
     setEditingId(bill._id);
     if (bill.returnId) {
@@ -175,6 +212,7 @@ function AppContent() {
     }
   };
 
+  // Delete Logic
   const requestDeleteBill = (id) => { setModal({ isOpen: true, type: 'confirm', title: 'Confirm Deletion', message: 'Are you sure?', onConfirm: () => confirmDeleteBill(id) }); };
   const confirmDeleteBill = async (id) => {
     try {
@@ -186,6 +224,7 @@ function AppContent() {
   };
 
   // --- FIXED A4 EXPORT FOR MOBILE & DESKTOP ---
+  // Captures the DOM element as an image/PDF regardless of screen size
   const exportBill = async (elementId, format, filename) => {
     const element = document.getElementById(elementId);
     if (!element) return;
@@ -245,6 +284,7 @@ function AppContent() {
     }
   };
 
+  // Share functionality using native Web Share API
   const handleShare = async () => { const element = document.getElementById("bill-preview") || document.getElementById("detail-preview-content") || document.getElementById("return-preview"); const canvas = await html2canvas(element, { scale: 3 }); canvas.toBlob(async (blob) => { const file = new File([blob], `Bill.png`, { type: 'image/png' }); if (navigator.share) await navigator.share({ title: `Bill`, files: [file] }); else alert("Web Share not supported"); }); };
 
   if (loading) return <div style={{padding:"20px"}}>Loading App...</div>;
@@ -258,8 +298,10 @@ function AppContent() {
 
       <div className="main-content">
         <Routes>
+          {/* Route: Home Dashboard */}
           <Route path="/" element={<div className="scrollable-page"><HomePage recentBills={recentBills} recentReturns={recentReturns} recentUpdated={recentUpdated} onNavigate={(page, state) => navigate("/" + page, state)} onViewBill={handleViewBill} /></div>} />
 
+          {/* Route: Create/Edit Bill */}
           <Route path="/billing" element={
              <div className="fixed-page-container">
                 <div className="editor-panel">
@@ -275,10 +317,16 @@ function AppContent() {
              </div>
           } />
 
+          {/* Route: View Bill Details */}
           <Route path="/bill-detail" element={selectedBill ? <BillDetail bill={selectedBill} onExport={(fmt, id) => { const num = selectedBill.updatedBillId || selectedBill.returnId || selectedBill.billNo; exportBill(id, fmt, `${selectedBill.client.name}-${num}`); }} onShare={handleShare} onEdit={handleEditBill} onDelete={requestDeleteBill} /> : <div style={{padding:20}}>No bill selected</div>} />
+          
+          {/* Route: History */}
           <Route path="/history" element={<div className="scrollable-page"><HistoryPage onViewBill={handleViewBill} refreshTrigger={refreshTrigger} /></div>} />
+          
+          {/* Route: Reports */}
           <Route path="/summary" element={<div className="scrollable-page"><ReportPage /></div>} />
 
+          {/* Route: Returns */}
           <Route path="/return" element={
              <div className="fixed-page-container">
                 <div className="editor-panel">
