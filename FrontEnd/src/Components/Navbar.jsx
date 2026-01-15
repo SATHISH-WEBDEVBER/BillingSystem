@@ -16,7 +16,7 @@ export default function Navbar() {
     { id: "/billing", label: "Billing", icon: <Icons.Bill /> },
     { id: "/return", label: "Returns", icon: <Icons.Return /> },
     { id: "/history", label: "History", icon: <Icons.History /> },
-    // { id: "/summary", label: "Report", icon: <Icons.Summary /> },
+    { id: "/summary", label: "Report", icon: <Icons.Summary /> },
   ];
 
   return (

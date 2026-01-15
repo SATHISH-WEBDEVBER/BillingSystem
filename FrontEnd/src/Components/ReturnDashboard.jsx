@@ -4,8 +4,6 @@ import { Icons } from './Icons';
 import EditorProductRow from './EditorProductRow';
 import '../styles/dashboard.css'; 
 
-// Component for handling the "Return" workflow. 
-// It allows finding an original bill, selecting items to return, and generating a credit note.
 export default function ReturnDashboard({ 
   productCatalog, 
   onGenerateReturn, 
@@ -18,12 +16,10 @@ export default function ReturnDashboard({
 }) {
   const [searchBillNo, setSearchBillNo] = useState("");
   const [loading, setLoading] = useState(false);
-  // Cache the full list of items from the original bill to allow "Restoring" items if removed
   const [originalBillItems, setOriginalBillItems] = useState([]);
   const [selectedRestoreItem, setSelectedRestoreItem] = useState("");
 
   // Auto-load items for Edit Mode
-  // If the user navigates to a return that is already in progress, fetch the original items for context
   useEffect(() => {
     const fetchOriginalItems = async () => {
       if (returnData.originalBillNo && originalBillItems.length === 0) {
@@ -41,34 +37,32 @@ export default function ReturnDashboard({
     if (!searchBillNo) return onError("Please enter a Bill Number.");
     setLoading(true);
     try {
-      // Check Exists: Prevent creating duplicate returns for the same bill
+      // Check Exists
       const checkRes = await axios.get(`http://localhost:5000/api/returns/check/${searchBillNo}`);
       if (checkRes.data.exists) {
         setLoading(false);
-        // If return exists, notify parent to switch to "Edit Mode" for that existing return
         onReturnExists(checkRes.data.returnBill);
         return; 
       }
 
-      // Find Bill: Fetch the original sales transaction
+      // Find Bill
       const res = await axios.get(`http://localhost:5000/api/bills/find/${searchBillNo}`);
       const bill = res.data;
       
       // LOGIC: Generate Return ID (NB007 -> RB007)
-      // Automatically creates the Return ID based on the original Bill ID
       const newReturnId = bill.billNo.replace("NB", "RB");
 
-      // Initialize the return form with data from the original bill
       setReturnData(prev => ({
         ...prev,
-        returnId: newReturnId, // Set it immediately
+        returnId: newReturnId, 
         originalBillNo: bill.billNo,
         clientName: bill.client.name,
         clientMobile: bill.client.mobile,
-        clientAddress: bill.client.address
+        clientAddress: bill.client.address,
+        // NEW: Auto-populate Payment Mode from Original Bill
+        paymentMode: bill.paymentMode || "Credit" 
       }));
       
-      // By default, populate the return list with ALL items (user removes what they KEEP)
       setReturnItems(bill.items);
       setOriginalBillItems(bill.items);
       
@@ -82,23 +76,14 @@ export default function ReturnDashboard({
     setLoading(false);
   };
 
-  // ... (Helpers: updateItem, removeItem, handleRestoreItem same as before) ...
   const updateItem = (index, field, value) => { const updated = [...returnItems]; updated[index][field] = value; setReturnItems(updated); };
-  
-  // NOTE: In this context, "removeItem" means the customer is KEEPING the item (removing from Return list)
   const removeItem = (index) => { const updated = returnItems.filter((_, i) => i !== index); setReturnItems(updated); };
-  
-  // Adds an item back to the return list if it was previously removed
   const handleRestoreItem = () => { if (!selectedRestoreItem) return; const itemToAdd = originalBillItems.find(item => item._id === selectedRestoreItem); if (itemToAdd) { setReturnItems([...returnItems, { ...itemToAdd }]); setSelectedRestoreItem(""); } };
-  
   const handleGenerate = () => { if (returnItems.length === 0) return onError("No items selected for return."); onGenerateReturn(); };
-  
-  // Logic to filter the dropdown: Only show items that are NOT currently in the return list
   const availableToRestore = originalBillItems.filter(ogItem => !returnItems.some(rItem => rItem.desc === ogItem.desc));
 
   return (
     <>
-      {/* Header Section */}
       <div className="editor-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{color: '#dc2626'}}><Icons.Return /></div>
@@ -107,7 +92,6 @@ export default function ReturnDashboard({
       </div>
 
       <div className="editor-content">
-        {/* VIEW 1: SEARCH MODE - Shown when no bill is loaded */}
         {!returnData.originalBillNo && (
             <div className="form-group" style={{textAlign:'center', padding:'40px 20px'}}>
                 <div style={{marginBottom:'20px'}}>
@@ -124,19 +108,29 @@ export default function ReturnDashboard({
             </div>
         )}
 
-        {/* VIEW 2: EDIT RETURN MODE - Shown when a bill is successfully found */}
         {returnData.originalBillNo && (
             <>
-                {/* Information Header */}
                 <div className="form-group" style={{borderLeft:'4px solid #2563eb'}}>
                     <div className="form-section-title">Original Bill Info</div>
                     <div className="input-grid">
                         <div><label className="input-label">Client Name</label><input value={returnData.clientName} readOnly className="input-readonly" /></div>
                         <div><label className="input-label">Return ID</label><input value={returnData.returnId} readOnly className="input-readonly" style={{fontWeight:'bold', color:'#dc2626'}} /></div>
                     </div>
+                    {/* NEW: Payment Mode Dropdown for Return */}
+                    <div style={{marginTop:'12px'}}>
+                        <label style={{fontSize:'12px', color:'#64748b', display:'block', marginBottom:'5px'}}>Return Payment Mode</label>
+                        <select 
+                            value={returnData.paymentMode} 
+                            onChange={(e) => setReturnData({...returnData, paymentMode: e.target.value})}
+                            style={{width:'100%', padding:'10px', border:'1px solid #e2e8f0', borderRadius:'6px'}}
+                        >
+                            <option value="Credit">Credit</option>
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI</option>
+                        </select>
+                    </div>
                 </div>
 
-                {/* Restore Section: Add items back if they were removed */}
                 <div className="form-group" style={{background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px dashed #cbd5e1'}}>
                     <div className="form-section-title" style={{marginBottom: '10px', color: '#475569'}}>Add Product from Invoice</div>
                     <div style={{display: 'flex', gap: '10px'}}>
@@ -148,7 +142,6 @@ export default function ReturnDashboard({
                     </div>
                 </div>
 
-                {/* Items List: The list of items actually being returned */}
                 <div className="form-group">
                     <div className="form-section-title" style={{display:'flex', justifyContent:'space-between'}}><span>Return Items</span><span style={{color:'#dc2626', fontSize:'11px'}}>* Remove items NOT being returned</span></div>
                     {returnItems.map((item, index) => (<EditorProductRow key={index} index={index} item={item} updateItem={updateItem} removeItem={removeItem} productCatalog={productCatalog} />))}
@@ -158,7 +151,6 @@ export default function ReturnDashboard({
         )}
       </div>
 
-      {/* Footer Actions */}
       <div className="editor-footer">
         {returnData.originalBillNo ? (
             <div style={{display:'flex', gap:'10px', width:'100%'}}>
