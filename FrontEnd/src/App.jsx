@@ -6,16 +6,16 @@ import jsPDF from "jspdf";
 import { calculateTotals } from "./utils/calculations";
 
 // Components
-import Navbar from "./components/Navbar";
-import BillPreview from "./components/BillPreview";
-import Dashboard from "./components/Dashboard";
-import SuccessPage from "./components/SuccessPage";
-import HomePage from "./components/HomePage";
-import BillDetail from "./components/BillDetail";
-import HistoryPage from "./components/HistoryPage"; 
-import ReportPage from "./components/ReportPage"; 
-import ReturnDashboard from "./components/ReturnDashboard"; 
-import Modal from "./components/Modal";
+import Navbar from "./Components/Navbar";
+import BillPreview from "./Components/BillPreview";
+import Dashboard from "./Components/Dashboard";
+import SuccessPage from "./Components/SuccessPage";
+import HomePage from "./Components/HomePage";
+import BillDetail from "./Components/BillDetail";
+import HistoryPage from "./Components/HistoryPage"; 
+import ReportPage from "./Components/ReportPage"; 
+import ReturnDashboard from "./Components/ReturnDashboard"; 
+import Modal from "./Components/Modal";
 
 // Global Styles
 import "./styles/app.css"; 
