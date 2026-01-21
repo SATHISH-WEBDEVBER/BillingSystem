@@ -3,21 +3,29 @@ import axios from 'axios';
 import '../styles/report.css';
 
 export default function ReportPage() {
-  const [view, setView] = useState('menu'); // 'menu', 'bill', 'product'
+  const [view, setView] = useState('menu'); 
   const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0 });
   const [loading, setLoading] = useState(false);
 
-  // --- SALES ANALYSIS STATE ---
+  // SALES ANALYSIS STATE
   const [analysisType, setAnalysisType] = useState('day');
   const [analysisValue, setAnalysisValue] = useState('');
   const [customTotal, setCustomTotal] = useState(null);
   const [loadingCustom, setLoadingCustom] = useState(false);
 
-  // --- INVENTORY STATE ---
+  // INVENTORY STATE
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   
-  // Product Sales Analysis State
+  // EDIT ITEM STATE
+  const [editingItemIndex, setEditingItemIndex] = useState(null);
+  const [editItemData, setEditItemData] = useState({ name: "", price: "", qty: "", unit: "" });
+
+  // ADD ITEM STATE
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newItemData, setNewItemData] = useState({ name: "", price: "", qty: "", unit: "" });
+
+  // PROD STATS STATE
   const [prodAnalysisType, setProdAnalysisType] = useState('day');
   const [prodAnalysisValue, setProdAnalysisValue] = useState('');
   const [soldProducts, setSoldProducts] = useState([]);
@@ -38,6 +46,7 @@ export default function ReportPage() {
     }
   }, [view]);
 
+  // --- API CALLS ---
   const fetchStats = async () => {
     setLoading(true);
     try { const res = await axios.get('http://localhost:5000/api/bills/stats'); setStats(res.data); } catch (e) {}
@@ -64,35 +73,106 @@ export default function ReportPage() {
     setLoadingProdStats(false);
   };
 
+  // --- EDIT HANDLERS ---
+  const handleEditClick = (item, index) => {
+    setEditingItemIndex(index);
+    setEditItemData({ ...item }); // Pre-fill
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItemIndex(null);
+    setEditItemData({ name: "", price: "", qty: "", unit: "" });
+  };
+
+  const handleSaveEdit = async (oldName) => {
+    // Basic Validation
+    if(!editItemData.name || editItemData.price < 0 || editItemData.qty < 0 || !editItemData.unit) {
+      alert("Please fill all fields correctly. Price/Qty cannot be negative.");
+      return;
+    }
+
+    try {
+      await axios.put('http://localhost:5000/api/products/item/update', {
+        category: selectedCategory.category,
+        oldName: oldName,
+        newItemData: editItemData
+      });
+      
+      // Refresh Data locally
+      const updatedItems = [...selectedCategory.items];
+      updatedItems[editingItemIndex] = { ...editItemData, price: Number(editItemData.price), qty: Number(editItemData.qty) };
+      setSelectedCategory({ ...selectedCategory, items: updatedItems });
+      
+      handleCancelEdit(); // Close edit mode
+    } catch (err) {
+      alert("Failed to update item.");
+    }
+  };
+
+  // --- ADD ITEM HANDLERS ---
+  const handleAddNewClick = () => {
+    setIsAddingItem(true);
+    setNewItemData({ name: "", price: "", qty: "", unit: "" });
+  };
+
+  const handleCancelNew = () => {
+    setIsAddingItem(false);
+    setNewItemData({ name: "", price: "", qty: "", unit: "" });
+  };
+
+  const handleSaveNew = async () => {
+    // STRICT VALIDATION
+    if (!newItemData.name.trim() || !newItemData.unit.trim()) {
+      alert("Name and Unit are required (Strings).");
+      return;
+    }
+    if (newItemData.price === "" || newItemData.qty === "" || isNaN(newItemData.price) || isNaN(newItemData.qty)) {
+      alert("Price and Quantity must be valid numbers.");
+      return;
+    }
+
+    try {
+      await axios.post('http://localhost:5000/api/products/item/add', {
+        category: selectedCategory.category,
+        newItem: newItemData
+      });
+
+      // Refresh Data locally
+      const updatedItems = [...selectedCategory.items, { 
+        name: newItemData.name, 
+        price: Number(newItemData.price), 
+        qty: Number(newItemData.qty), 
+        unit: newItemData.unit 
+      }];
+      setSelectedCategory({ ...selectedCategory, items: updatedItems });
+
+      handleCancelNew(); // Close add mode
+    } catch (err) {
+      alert("Failed to add new item.");
+    }
+  };
+
+  // --- OTHER HANDLERS ---
   const handleAnalysisChange = (e) => { const val = e.target.value; setAnalysisValue(val); fetchCustomStats(analysisType, val); };
   const handleTabChange = (type) => { setAnalysisType(type); setAnalysisValue(''); setCustomTotal(null); };
-
   const handleProdAnalysisChange = (e) => { const val = e.target.value; setProdAnalysisValue(val); fetchProductStats(prodAnalysisType, val); };
   const handleProdTabChange = (type) => { setProdAnalysisType(type); setProdAnalysisValue(''); setSoldProducts([]); };
-
   const formatMoney = (amount) => amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
+  // --- 1. MENU VIEW ---
   if (view === 'menu') {
     return (
       <div className="report-container">
-        <div className="report-header-text">
-          <h2>Business Analytics</h2>
-          <p>Track your sales performance and inventory</p>
-        </div>
+        <div className="report-header-text"><h2>Business Analytics</h2><p>Track your sales performance and inventory</p></div>
         <div className="report-menu">
-          <div className="report-card-btn" onClick={() => setView('bill')}>
-            <div className="report-icon">📊</div>
-            <div><h3>Sales Reports</h3><p>Daily, Weekly & Monthly sales analysis</p></div>
-          </div>
-          <div className="report-card-btn" onClick={() => setView('product')}>
-            <div className="report-icon">📦</div>
-            <div><h3>Inventory Reports</h3><p>Stock levels and product performance</p></div>
-          </div>
+          <div className="report-card-btn" onClick={() => setView('bill')}><div className="report-icon">📊</div><div><h3>Sales Reports</h3><p>Daily, Weekly & Monthly sales analysis</p></div></div>
+          <div className="report-card-btn" onClick={() => setView('product')}><div className="report-icon">📦</div><div><h3>Inventory Reports</h3><p>Stock levels and product performance</p></div></div>
         </div>
       </div>
     );
   }
 
+  // --- 2. SALES REPORT VIEW ---
   if (view === 'bill') {
     return (
       <div className="report-container">
@@ -132,6 +212,7 @@ export default function ReportPage() {
     );
   }
 
+  // --- 3. INVENTORY REPORT VIEW ---
   if (view === 'product') {
     return (
       <div className="report-container">
@@ -192,25 +273,75 @@ export default function ReportPage() {
             <div className="analysis-section" style={{marginTop:'10px', borderTop:'none'}}>
                 <div style={{marginBottom:'20px'}}>
                     <h3 style={{margin:0, color:'#1e293b'}}>{selectedCategory.category} - Current Stock</h3>
-                    <p style={{margin:'5px 0 0 0', fontSize:'13px', color:'#64748b'}}>Real-time inventory levels fetched from database</p>
+                    <p style={{margin:'5px 0 0 0', fontSize:'13px', color:'#64748b'}}>Manage products and stock levels</p>
                 </div>
+                
                 <div className="items-table-container">
-                <table className="report-table">
-                    <thead><tr><th>Item Name</th><th>Price</th><th>Remaining Stock</th></tr></thead>
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th>Item Name</th>
+                        <th style={{width:'100px'}}>Price</th>
+                        <th style={{width:'120px'}}>Stock</th>
+                        <th style={{width:'100px'}}>Unit</th>
+                        <th style={{width:'100px'}}>Actions</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                    {selectedCategory.items.map((item, i) => (
+                      {selectedCategory.items.map((item, i) => (
                         <tr key={i}>
-                        <td style={{fontWeight:'500'}}>{item.name}</td>
-                        <td>₹{item.price}</td>
-                        {/* CHANGED: Use item.qty to match updated DB structure */}
-                        <td style={{fontWeight:'bold', color: item.qty < 10 ? '#dc2626' : '#16a34a'}}>
-                            {item.qty} {item.unit}
-                            {item.qty < 10 && <div className="low-stock-badge">⚠️ Low Stock</div>}
-                        </td>
+                          {editingItemIndex === i ? (
+                            // --- EDIT MODE ---
+                            <>
+                              <td><input className="edit-input" value={editItemData.name} onChange={(e) => setEditItemData({...editItemData, name: e.target.value})} placeholder="Name" /></td>
+                              <td><input className="edit-input" type="number" value={editItemData.price} onChange={(e) => setEditItemData({...editItemData, price: e.target.value})} placeholder="Price" /></td>
+                              <td><input className="edit-input" type="number" value={editItemData.qty} onChange={(e) => setEditItemData({...editItemData, qty: e.target.value})} placeholder="Qty" /></td>
+                              <td><input className="edit-input" value={editItemData.unit} onChange={(e) => setEditItemData({...editItemData, unit: e.target.value})} placeholder="Unit" /></td>
+                              <td>
+                                <button className="btn-action btn-save" onClick={() => handleSaveEdit(item.name)}>Save</button>
+                                <button className="btn-action btn-cancel" onClick={handleCancelEdit}>X</button>
+                              </td>
+                            </>
+                          ) : (
+                            // --- VIEW MODE ---
+                            <>
+                              <td style={{fontWeight:'500'}}>{item.name}</td>
+                              <td>₹{item.price}</td>
+                              <td style={{fontWeight:'bold', color: item.qty < 10 ? '#dc2626' : '#16a34a'}}>
+                                {item.qty} 
+                                {item.qty < 10 && <div className="low-stock-badge">⚠️ Low</div>}
+                              </td>
+                              <td>{item.unit}</td>
+                              <td>
+                                <button className="btn-action btn-edit" onClick={() => handleEditClick(item, i)}>✎ Edit</button>
+                              </td>
+                            </>
+                          )}
                         </tr>
-                    ))}
+                      ))}
+
+                      {/* --- ADD NEW ITEM ROW --- */}
+                      {isAddingItem && (
+                        <tr style={{background:'#f0f9ff'}}>
+                          <td><input className="edit-input" value={newItemData.name} onChange={(e) => setNewItemData({...newItemData, name: e.target.value})} placeholder="New Item Name" autoFocus /></td>
+                          <td><input className="edit-input" type="number" value={newItemData.price} onChange={(e) => setNewItemData({...newItemData, price: e.target.value})} placeholder="Price" /></td>
+                          <td><input className="edit-input" type="number" value={newItemData.qty} onChange={(e) => setNewItemData({...newItemData, qty: e.target.value})} placeholder="Qty" /></td>
+                          <td><input className="edit-input" value={newItemData.unit} onChange={(e) => setNewItemData({...newItemData, unit: e.target.value})} placeholder="Unit (e.g. pcs)" /></td>
+                          <td>
+                            <button className="btn-action btn-save" onClick={handleSaveNew}>Add</button>
+                            <button className="btn-action btn-cancel" onClick={handleCancelNew}>X</button>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
-                </table>
+                  </table>
+                  
+                  {/* ADD BUTTON (Only visible if not currently adding) */}
+                  {!isAddingItem && (
+                    <button className="btn-add-item-row" onClick={handleAddNewClick}>
+                      + Add New Item
+                    </button>
+                  )}
                 </div>
             </div>
           </div>

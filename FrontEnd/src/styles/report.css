@@ -120,7 +120,7 @@
 }
 .stat-footer { font-size: 12px; color: #94a3b8; font-weight: 500; }
 
-/* --- ANALYSIS SECTION (Common) --- */
+/* --- ANALYSIS SECTION --- */
 .analysis-section {
   margin-top: 40px;
   background: white;
@@ -162,7 +162,7 @@
   box-shadow: 0 10px 20px -5px rgba(15,23,42,0.3);
 }
 
-/* --- INVENTORY SPECIFIC STYLES (NEW) --- */
+/* --- INVENTORY SPECIFIC STYLES --- */
 
 /* 1. Category Grid */
 .inventory-grid {
@@ -204,7 +204,7 @@
   transform: rotate(-15deg);
 }
 
-/* 2. Items List Table */
+/* 2. Items List Table & Edit Controls */
 .items-view { animation: fadeIn 0.3s ease-out; }
 .back-btn-small {
   background: none; border: none; color: #64748b; font-size: 14px; font-weight: 600; cursor: pointer;
@@ -241,7 +241,52 @@
 .report-table tr:last-child td { border-bottom: none; }
 .report-table tr:hover { background: #fcfcfc; }
 
-/* 3. Product Sales Analysis (Clean Table) */
+/* Edit Inputs inside Table */
+.edit-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.edit-input:focus { border-color: #2563eb; outline: none; }
+
+/* Small Action Buttons (Edit/Save/Cancel) */
+.btn-action {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-edit { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.btn-edit:hover { background: #dbeafe; }
+
+.btn-save { background: #22c55e; color: white; margin-right: 5px; }
+.btn-save:hover { background: #16a34a; }
+
+.btn-cancel { background: #fff; color: #64748b; border-color: #cbd5e1; }
+.btn-cancel:hover { background: #f1f5f9; }
+
+/* Add New Item Button */
+.btn-add-item-row {
+  width: 100%;
+  padding: 15px;
+  background: #f8fafc;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.2s;
+}
+.btn-add-item-row:hover { background: #eff6ff; }
+
+/* 3. Product Sales Analysis */
 .sold-products-list {
   background: white;
   border-radius: 12px;
@@ -282,7 +327,6 @@
   .inventory-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .category-card { padding: 15px; }
   
-  /* Scrollable Tables on Mobile */
   .items-table-container, .sold-products-list { overflow-x: auto; }
   .report-table th, .report-table td { white-space: nowrap; padding: 12px 15px; }
 }
