@@ -7,69 +7,71 @@ export default function ReportPage() {
   const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0 });
   const [loading, setLoading] = useState(false);
 
-  // --- NEW STATE FOR CUSTOM ANALYSIS ---
-  const [analysisType, setAnalysisType] = useState('day'); // 'day', 'week', 'month'
+  // --- SALES ANALYSIS STATE ---
+  const [analysisType, setAnalysisType] = useState('day');
   const [analysisValue, setAnalysisValue] = useState('');
   const [customTotal, setCustomTotal] = useState(null);
   const [loadingCustom, setLoadingCustom] = useState(false);
 
-  // Fetch Stats Only when entering Bill View
+  // --- INVENTORY STATE ---
+  const [products, setProducts] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  // Product Sales Analysis State
+  const [prodAnalysisType, setProdAnalysisType] = useState('day');
+  const [prodAnalysisValue, setProdAnalysisValue] = useState('');
+  const [soldProducts, setSoldProducts] = useState([]);
+  const [loadingProdStats, setLoadingProdStats] = useState(false);
+
   useEffect(() => {
     if (view === 'bill') {
       fetchStats();
-      // Set default analysis value to today
       const today = new Date().toISOString().split('T')[0];
       setAnalysisValue(today);
       fetchCustomStats('day', today);
     }
+    if (view === 'product') {
+      fetchInventory();
+      const today = new Date().toISOString().split('T')[0];
+      setProdAnalysisValue(today);
+      fetchProductStats('day', today);
+    }
   }, [view]);
 
-  // Fetch Overview Stats
   const fetchStats = async () => {
     setLoading(true);
-    try {
-      const res = await axios.get('http://localhost:5000/api/bills/stats');
-      setStats(res.data);
-    } catch (error) { console.error("Error fetching stats:", error); }
+    try { const res = await axios.get('http://localhost:5000/api/bills/stats'); setStats(res.data); } catch (e) {}
     setLoading(false);
   };
 
-  // --- NEW: Fetch Custom Stats ---
+  const fetchInventory = async () => {
+    setLoading(true);
+    try { const res = await axios.get('http://localhost:5000/api/products'); setProducts(res.data); } catch (e) {}
+    setLoading(false);
+  };
+
   const fetchCustomStats = async (type, value) => {
     if (!value) return;
     setLoadingCustom(true);
-    try {
-      const res = await axios.post('http://localhost:5000/api/bills/custom-stats', { type, value });
-      setCustomTotal(res.data.total);
-    } catch (error) { console.error("Error fetching custom stats:", error); }
+    try { const res = await axios.post('http://localhost:5000/api/bills/custom-stats', { type, value }); setCustomTotal(res.data.total); } catch (e) {}
     setLoadingCustom(false);
   };
 
-  // Handle Input Change for Custom Stats
-  const handleAnalysisChange = (e) => {
-    const val = e.target.value;
-    setAnalysisValue(val);
-    fetchCustomStats(analysisType, val);
+  const fetchProductStats = async (type, value) => {
+    if (!value) return;
+    setLoadingProdStats(true);
+    try { const res = await axios.post('http://localhost:5000/api/bills/product-stats', { type, value }); setSoldProducts(res.data); } catch (e) {}
+    setLoadingProdStats(false);
   };
 
-  // Handle Tab Switch
-  const handleTabChange = (type) => {
-    setAnalysisType(type);
-    setAnalysisValue(''); // Reset value to force user to pick
-    setCustomTotal(null); // Reset result
-  };
+  const handleAnalysisChange = (e) => { const val = e.target.value; setAnalysisValue(val); fetchCustomStats(analysisType, val); };
+  const handleTabChange = (type) => { setAnalysisType(type); setAnalysisValue(''); setCustomTotal(null); };
 
-  // Helper for "Smart Money" Format (No decimals, Indian Format)
-  const formatMoney = (amount) => {
-    return amount.toLocaleString('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0, 
-      minimumFractionDigits: 0
-    });
-  };
+  const handleProdAnalysisChange = (e) => { const val = e.target.value; setProdAnalysisValue(val); fetchProductStats(prodAnalysisType, val); };
+  const handleProdTabChange = (type) => { setProdAnalysisType(type); setProdAnalysisValue(''); setSoldProducts([]); };
 
-  // --- 1. MAIN MENU VIEW ---
+  const formatMoney = (amount) => amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
   if (view === 'menu') {
     return (
       <div className="report-container">
@@ -77,108 +79,50 @@ export default function ReportPage() {
           <h2>Business Analytics</h2>
           <p>Track your sales performance and inventory</p>
         </div>
-
         <div className="report-menu">
-          
           <div className="report-card-btn" onClick={() => setView('bill')}>
             <div className="report-icon">📊</div>
-            <div>
-              <h3>Sales Reports</h3>
-              <p>Daily, Weekly & Monthly sales analysis</p>
-            </div>
+            <div><h3>Sales Reports</h3><p>Daily, Weekly & Monthly sales analysis</p></div>
           </div>
-
           <div className="report-card-btn" onClick={() => setView('product')}>
             <div className="report-icon">📦</div>
-            <div>
-              <h3>Inventory Reports</h3>
-              <p>Stock levels and product performance</p>
-            </div>
+            <div><h3>Inventory Reports</h3><p>Stock levels and product performance</p></div>
           </div>
-
         </div>
       </div>
     );
   }
 
-  // --- 2. BILL STATS VIEW (Smart Dashboard) ---
   if (view === 'bill') {
     return (
       <div className="report-container">
         <div className="stats-header">
-          <button className="back-link" onClick={() => setView('menu')}>
-            ← Dashboard
-          </button>
-          <h2 style={{margin:0, fontSize:"20px"}}>Sales Overview</h2>
+          <button className="back-link" onClick={() => setView('menu')}>← Dashboard</button>
+          <h2 style={{margin:0, fontSize:"18px", color:"#1e293b"}}>Sales Overview</h2>
         </div>
-
-        {loading ? (
-          <div style={{textAlign:'center', padding:40, color:'#64748b'}}>Calculating sales data...</div>
-        ) : (
+        {loading ? <div style={{textAlign:'center', padding:40, color:'#64748b'}}>Loading data...</div> : (
           <>
-            {/* EXISTING OVERVIEW GRID */}
             <div className="stats-grid">
-              
-              <div className="stat-card daily">
-                <div className="stat-header">
-                  <span className="stat-label">Today's Sales</span>
-                  <div className="stat-icon-bg">📅</div>
-                </div>
-                <div className="stat-value">{formatMoney(stats.daily)}</div>
-                <div className="stat-footer">Updated just now</div>
-              </div>
-
-              <div className="stat-card weekly">
-                <div className="stat-header">
-                  <span className="stat-label">This Week</span>
-                  <div className="stat-icon-bg">📈</div>
-                </div>
-                <div className="stat-value">{formatMoney(stats.weekly)}</div>
-                <div className="stat-footer">Current week performance</div>
-              </div>
-
-              <div className="stat-card monthly">
-                <div className="stat-header">
-                  <span className="stat-label">This Month</span>
-                  <div className="stat-icon-bg">🏆</div>
-                </div>
-                <div className="stat-value">{formatMoney(stats.monthly)}</div>
-                <div className="stat-footer">Total for current month</div>
-              </div>
-
+              <div className="stat-card daily"><div className="stat-header"><span className="stat-label">Today</span><div className="stat-icon-bg">📅</div></div><div className="stat-value">{formatMoney(stats.daily)}</div><div className="stat-footer">Updated just now</div></div>
+              <div className="stat-card weekly"><div className="stat-header"><span className="stat-label">This Week</span><div className="stat-icon-bg">📈</div></div><div className="stat-value">{formatMoney(stats.weekly)}</div><div className="stat-footer">Current week</div></div>
+              <div className="stat-card monthly"><div className="stat-header"><span className="stat-label">This Month</span><div className="stat-icon-bg">🏆</div></div><div className="stat-value">{formatMoney(stats.monthly)}</div><div className="stat-footer">Current month</div></div>
             </div>
-
-            {/* --- NEW: DETAILED ANALYSIS SECTION --- */}
             <div className="analysis-section">
               <div className="analysis-header">
-                <h3>Detailed Sales Analysis</h3>
-                <p>Select a specific period to check past performance</p>
+                <div><h3>Custom Analysis</h3><p>Check sales for any date range</p></div>
+                <div className="analysis-tabs">
+                  <button className={`analysis-tab ${analysisType === 'day' ? 'active' : ''}`} onClick={() => handleTabChange('day')}>Daily</button>
+                  <button className={`analysis-tab ${analysisType === 'week' ? 'active' : ''}`} onClick={() => handleTabChange('week')}>Weekly</button>
+                  <button className={`analysis-tab ${analysisType === 'month' ? 'active' : ''}`} onClick={() => handleTabChange('month')}>Monthly</button>
+                </div>
               </div>
-
-              <div className="analysis-tabs">
-                <button className={`analysis-tab ${analysisType === 'day' ? 'active' : ''}`} onClick={() => handleTabChange('day')}>Daily</button>
-                <button className={`analysis-tab ${analysisType === 'week' ? 'active' : ''}`} onClick={() => handleTabChange('week')}>Weekly</button>
-                <button className={`analysis-tab ${analysisType === 'month' ? 'active' : ''}`} onClick={() => handleTabChange('month')}>Monthly</button>
-              </div>
-
               <div className="analysis-controls">
-                {analysisType === 'day' && (
-                  <input type="date" className="analysis-input" value={analysisValue} onChange={handleAnalysisChange} />
-                )}
-                {analysisType === 'week' && (
-                  <input type="week" className="analysis-input" value={analysisValue} onChange={handleAnalysisChange} />
-                )}
-                {analysisType === 'month' && (
-                  <input type="month" className="analysis-input" value={analysisValue} onChange={handleAnalysisChange} />
-                )}
-
+                {analysisType === 'day' && <input type="date" className="analysis-input" value={analysisValue} onChange={handleAnalysisChange} />}
+                {analysisType === 'week' && <input type="week" className="analysis-input" value={analysisValue} onChange={handleAnalysisChange} />}
+                {analysisType === 'month' && <input type="month" className="analysis-input" value={analysisValue} onChange={handleAnalysisChange} />}
                 <div className="analysis-result-card">
-                  <div style={{fontSize:'13px', color:'#94a3b8', textTransform:'uppercase', fontWeight:'bold', letterSpacing:'0.5px'}}>
-                    {analysisType === 'day' ? "Day's Total" : (analysisType === 'week' ? "Week's Total" : "Month's Total")}
-                  </div>
-                  <div style={{fontSize:'28px', fontWeight:'700', color:'#fff'}}>
-                    {loadingCustom ? "..." : (customTotal !== null ? formatMoney(customTotal) : "—")}
-                  </div>
+                  <div style={{fontSize:'12px', color:'#94a3b8', textTransform:'uppercase', fontWeight:'bold'}}>Total Sales</div>
+                  <div style={{fontSize:'24px', fontWeight:'700'}}>{loadingCustom ? "..." : (customTotal !== null ? formatMoney(customTotal) : "—")}</div>
                 </div>
               </div>
             </div>
@@ -188,22 +132,89 @@ export default function ReportPage() {
     );
   }
 
-  // --- 3. PRODUCT VIEW (Placeholder) ---
   if (view === 'product') {
     return (
       <div className="report-container">
         <div className="stats-header">
-          <button className="back-link" onClick={() => setView('menu')}>
-            ← Dashboard
-          </button>
-          <h2 style={{margin:0, fontSize:"20px"}}>Inventory Stats</h2>
+          <button className="back-link" onClick={() => setView('menu')}>← Dashboard</button>
+          <h2 style={{margin:0, fontSize:"18px", color:"#1e293b"}}>Inventory Management</h2>
         </div>
         
-        <div className="empty-state-product">
-          <div style={{fontSize:"40px", marginBottom:"10px"}}>🚧</div>
-          <h3 style={{margin:"0 0 10px 0", color:"#1e293b"}}>Product Analytics Coming Soon</h3>
-          <p style={{margin:0, color:"#64748b"}}>We are building advanced inventory tracking features.</p>
-        </div>
+        {!selectedCategory ? (
+          <>
+            <h3 style={{margin:'0 0 20px 0', color:'#334155'}}>Product Categories</h3>
+            <div className="inventory-grid">
+              {products.map((cat, idx) => (
+                <div key={idx} className="category-card" onClick={() => setSelectedCategory(cat)}>
+                  <h3>{cat.category}</h3>
+                  <p>{cat.items.length} Items</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="analysis-section" style={{marginTop:'50px', borderTop:'4px solid #f59e0b'}}>
+              <div className="analysis-header">
+                <div><h3>Product Sales Analysis</h3><p>See exactly what products sold</p></div>
+                <div className="analysis-tabs">
+                  <button className={`analysis-tab ${prodAnalysisType === 'day' ? 'active' : ''}`} onClick={() => handleProdTabChange('day')}>Daily</button>
+                  <button className={`analysis-tab ${prodAnalysisType === 'week' ? 'active' : ''}`} onClick={() => handleProdTabChange('week')}>Weekly</button>
+                  <button className={`analysis-tab ${prodAnalysisType === 'month' ? 'active' : ''}`} onClick={() => handleProdTabChange('month')}>Monthly</button>
+                </div>
+              </div>
+              <div className="analysis-controls">
+                {prodAnalysisType === 'day' && <input type="date" className="analysis-input" value={prodAnalysisValue} onChange={handleProdAnalysisChange} />}
+                {prodAnalysisType === 'week' && <input type="week" className="analysis-input" value={prodAnalysisValue} onChange={handleProdAnalysisChange} />}
+                {prodAnalysisType === 'month' && <input type="month" className="analysis-input" value={prodAnalysisValue} onChange={handleProdAnalysisChange} />}
+              </div>
+              <div className="sold-products-list">
+                {loadingProdStats && <div style={{padding:'20px', color:'#64748b'}}>Loading...</div>}
+                {!loadingProdStats && soldProducts.length === 0 && <div style={{padding:'30px', color:'#94a3b8', textAlign:'center'}}>No sales found for this period.</div>}
+                {soldProducts.length > 0 && (
+                  <table className="report-table">
+                    <thead><tr><th>Product Name</th><th>Category</th><th>Quantity Sold</th></tr></thead>
+                    <tbody>
+                      {soldProducts.map((p, idx) => (
+                        <tr key={idx}>
+                          <td>{p.name}</td>
+                          <td><span style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:'4px', fontSize:'12px'}}>{p.category}</span></td>
+                          <td style={{fontWeight:'700', color:'#2563eb'}}>{p.qty} {p.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="items-view">
+            <button className="back-btn-small" onClick={() => setSelectedCategory(null)}>← Back to Categories</button>
+            <div className="analysis-section" style={{marginTop:'10px', borderTop:'none'}}>
+                <div style={{marginBottom:'20px'}}>
+                    <h3 style={{margin:0, color:'#1e293b'}}>{selectedCategory.category} - Current Stock</h3>
+                    <p style={{margin:'5px 0 0 0', fontSize:'13px', color:'#64748b'}}>Real-time inventory levels fetched from database</p>
+                </div>
+                <div className="items-table-container">
+                <table className="report-table">
+                    <thead><tr><th>Item Name</th><th>Price</th><th>Remaining Stock</th></tr></thead>
+                    <tbody>
+                    {selectedCategory.items.map((item, i) => (
+                        <tr key={i}>
+                        <td style={{fontWeight:'500'}}>{item.name}</td>
+                        <td>₹{item.price}</td>
+                        {/* CHANGED: Use item.qty to match updated DB structure */}
+                        <td style={{fontWeight:'bold', color: item.qty < 10 ? '#dc2626' : '#16a34a'}}>
+                            {item.qty} {item.unit}
+                            {item.qty < 10 && <div className="low-stock-badge">⚠️ Low Stock</div>}
+                        </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

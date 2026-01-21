@@ -2,19 +2,27 @@ import React from 'react';
 import SearchableSelect from './SearchableSelect';
 import { Icons } from './Icons';
 
-// Component representing a single row in the product list editor
-// Allows selecting a category, a specific product, and entering quantity/rate
 export default function EditorProductRow({ item, index, updateItem, removeItem, productCatalog }) {
-  // Logic: Find the full category object from the catalog based on the selected category name
   const selectedCategory = productCatalog.find(c => c.category === item.category);
-  // Logic: If a category is selected, get its list of items; otherwise, the list is empty
   const subItems = selectedCategory ? selectedCategory.items : [];
+  
+  // Find the specific item object to check stock
+  const selectedProductItem = selectedCategory?.items.find(i => i.name === item.desc);
+  
+  // CHANGED: Use 'qty' instead of 'quantity'
+  const maxStock = selectedProductItem ? selectedProductItem.qty : 0;
+  
+  // Check if current input exceeds stock
+  const isOverselling = selectedProductItem && Number(item.qty) > maxStock;
+
+  const handleQtyChange = (val) => {
+    updateItem(index, "qty", val); 
+  };
 
   return (
-    <div className="product-row-db">
-      {/* Row 1: Searchable Dropdowns for Category and Product Description */}
+    <div className="product-row-db" style={{border: isOverselling ? '1px solid #dc2626' : '1px solid #e2e8f0'}}>
+      {/* Row 1: Searchable Dropdowns */}
       <div style={{ display: "flex", gap: "5px", marginBottom: "8px" }}>
-        {/* Category Selection Dropdown */}
         <div style={{ flex: 1 }}>
           <SearchableSelect
             placeholder="Category"
@@ -24,42 +32,51 @@ export default function EditorProductRow({ item, index, updateItem, removeItem, 
           />
         </div>
 
-        {/* Item Selection Dropdown (Dependent on Category) */}
         <div style={{ flex: 1.5 }}>
           <SearchableSelect
             placeholder={item.category ? "Search Item" : "Select Category"}
-            // Filters options to only show items belonging to the selected category
             options={subItems.map(s => s.name)}
             value={item.desc}
             onChange={(val) => updateItem(index, "desc", val)}
-            // Disable this field until a category is chosen
             disabled={!item.category}
           />
         </div>
 
-        {/* Delete Button to remove this specific row */}
         <button onClick={() => removeItem(index)} className="btn-icon-del">
           <Icons.Trash />
         </button>
       </div>
 
-      {/* Row 2: Numeric Inputs for Quantity, Unit, and Price */}
+      {/* Row 2: Numbers */}
       <div style={{ display: "flex", gap: "5px" }}>
-        <input 
-            type="number" 
-            placeholder="Qty" 
-            value={item.qty} 
-            onChange={(e) => updateItem(index, "qty", e.target.value)} 
-            style={{ flex: 1 }} 
-        />
+        <div style={{flex:1}}>
+            <input 
+                type="number" 
+                placeholder="Qty" 
+                value={item.qty} 
+                onChange={(e) => handleQtyChange(e.target.value)} 
+                style={{ width: '100%', borderColor: isOverselling ? '#dc2626' : '#e2e8f0' }}
+            />
+            {/* Stock Warning / Error Message */}
+            {selectedProductItem && (
+                <div style={{fontSize:'10px', marginTop:'2px'}}>
+                    {isOverselling ? (
+                        <span style={{color:'#dc2626', fontWeight:'bold'}}>Max available: {maxStock}</span>
+                    ) : (
+                        <span style={{color: maxStock < 10 ? '#ea580c' : '#64748b'}}>
+                           {maxStock < 10 ? `Low Stock: ${maxStock} left` : `Stock: ${maxStock}`}
+                        </span>
+                    )}
+                </div>
+            )}
+        </div>
+
         <input 
             placeholder="Unit" 
             value={item.unit} 
             onChange={(e) => updateItem(index, "unit", e.target.value)} 
             style={{ flex: 1 }} 
         />
-        {/* CHANGED: Removed readOnly and className="input-readonly" */}
-        {/* This input is now editable, allowing the user to manually override the price */}
         <input 
             type="number" 
             placeholder="Rate" 

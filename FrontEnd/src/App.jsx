@@ -3,19 +3,19 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-route
 import axios from "axios";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { calculateTotals } from "./utils/calculations.js";
+import { calculateTotals } from "./utils/calculations";
 
 // Components
-import Navbar from "./Components/Navbar";
-import BillPreview from "./Components/BillPreview";
-import Dashboard from "./Components/Dashboard";
-import SuccessPage from "./Components/SuccessPage";
-import HomePage from "./Components/HomePage";
-import BillDetail from "./Components/BillDetail";
-import HistoryPage from "./Components/HistoryPage"; 
-import ReportPage from "./Components/ReportPage"; 
-import ReturnDashboard from "./Components/ReturnDashboard"; 
-import Modal from "./Components/Modal";
+import Navbar from "./components/Navbar";
+import BillPreview from "./components/BillPreview";
+import Dashboard from "./components/Dashboard";
+import SuccessPage from "./components/SuccessPage";
+import HomePage from "./components/HomePage";
+import BillDetail from "./components/BillDetail";
+import HistoryPage from "./components/HistoryPage"; 
+import ReportPage from "./components/ReportPage"; 
+import ReturnDashboard from "./components/ReturnDashboard"; 
+import Modal from "./components/Modal";
 
 // Global Styles
 import "./styles/app.css"; 
@@ -48,7 +48,6 @@ function AppContent() {
 
   const [billData, setBillData] = useState({ clientName: "", clientAddress: "", clientMobile: "", billNo: "", billDate: getTodayDate(), paymentMode: "Credit", shopMobile: "6385278892" });
   const [items, setItems] = useState([ { category: "", desc: "", qty: "", rate: "", unit: "Pcs" } ]);
-  // ADDED: paymentMode to returnBillData
   const [returnBillData, setReturnBillData] = useState({ returnId: "", originalBillNo: "", returnDate: getTodayDate(), clientName: "", clientMobile: "", clientAddress: "", shopMobile: "6385278892", paymentMode: "Credit" });
   const [returnItems, setReturnItems] = useState([]);
   const [productCatalog, setProductCatalog] = useState([]);
@@ -112,6 +111,17 @@ function AppContent() {
       const invalidItems = activeItems.filter(item => !item.qty || Number(item.qty) <= 0);
       if (invalidItems.length > 0) return showErrorModal("Every product must have a quantity.");
 
+      // --- VALIDATE STOCK BEFORE SENDING ---
+      for (const item of activeItems) {
+        const cat = productCatalog.find(c => c.category === item.category);
+        if (cat) {
+            const prod = cat.items.find(i => i.name === item.desc);
+            if (prod && Number(item.qty) > prod.quantity) {
+                return showErrorModal(`Insufficient stock for ${item.desc}. Available: ${prod.quantity}`);
+            }
+        }
+      }
+
       const currentBillNo = billData.billNo;
       const currentClient = billData.clientName || "Client";
 
@@ -133,7 +143,14 @@ function AppContent() {
       await axios.put('http://localhost:5000/api/products/bulk-update', activeItems);
       setSuccessData({ billNo: currentBillNo, clientName: currentClient });
       triggerRefresh(); setView("success");
-    } catch (error) { showErrorModal("Failed to save bill."); }
+    } catch (error) { 
+        // Handle Backend Error (e.g. race condition stock error)
+        if(error.response && error.response.data && error.response.data.message) {
+            showErrorModal(error.response.data.message);
+        } else {
+            showErrorModal("Failed to save bill."); 
+        }
+    }
   };
 
   const handleGenerateReturn = async () => {
@@ -147,7 +164,6 @@ function AppContent() {
       setReturnItems(returnItems); 
       const finalReturnTotals = calculateTotals(returnItems);
 
-      // ADDED: paymentMode to payload
       const payload = { 
         originalBillNo: returnBillData.originalBillNo, 
         returnDate: returnBillData.returnDate, 
@@ -167,7 +183,6 @@ function AppContent() {
 
   const handleNewReturn = async () => {
     setLoading(true); setEditingId(null); setReturnItems([]);
-    // Reset paymentMode to Credit or default
     setReturnBillData(prev => ({...prev, returnId: "", originalBillNo: "", clientName: "", clientMobile: "", clientAddress: "", paymentMode: "Credit"}));
     setReturnView("dashboard"); setLoading(false);
   };
@@ -184,7 +199,6 @@ function AppContent() {
   const handleEditBill = (bill) => {
     setEditingId(bill._id);
     if (bill.returnId) {
-        // ADDED: load paymentMode for edit
         setReturnBillData({ returnId: bill.returnId, originalBillNo: bill.originalBillNo, returnDate: bill.returnDate, paymentMode: bill.paymentMode, clientName: bill.client.name, clientAddress: bill.client.address || "", clientMobile: bill.client.mobile, shopMobile: "6385278892" });
         setReturnItems(bill.items); setReturnView("dashboard"); navigate("/return");
     } else {
@@ -236,7 +250,7 @@ function AppContent() {
 
   if (loading) return <div style={{padding:"20px"}}>Loading App...</div>;
 
-  const returnPreviewData = { ...returnBillData, billNo: returnBillData.returnId, billDate: returnBillData.returnDate };
+  const returnPreviewData = { ...returnBillData, billNo: returnBillData.returnId, billDate: returnBillData.returnDate, paymentMode: "Return Note" };
 
   return (
     <div className="app-layout">
