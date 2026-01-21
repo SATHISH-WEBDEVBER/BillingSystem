@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-route
 import axios from "axios";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { calculateTotals } from "./utils/calculations";
+import { calculateTotals } from "./utils/calculations.js";
 
 // Components
 import Navbar from "./Components/Navbar";
