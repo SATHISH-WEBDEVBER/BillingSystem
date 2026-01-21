@@ -237,43 +237,59 @@
   font-size: 14px;
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 .report-table tr:last-child td { border-bottom: none; }
 .report-table tr:hover { background: #fcfcfc; }
 
-/* Edit Inputs inside Table */
+/* --- EDIT INPUTS --- */
 .edit-input {
   width: 100%;
-  padding: 8px;
+  padding: 10px 12px;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s;
 }
-.edit-input:focus { border-color: #2563eb; outline: none; }
+.edit-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); outline: none; }
 
-/* Small Action Buttons (Edit/Save/Cancel) */
-.btn-action {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 6px;
+/* --- ACTION ICON BUTTONS (Edit/Save/Cancel) --- */
+.action-buttons-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-icon-action {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border: 1px solid transparent;
-  display: inline-flex; align-items: center; gap: 4px;
+  transition: all 0.2s;
+  color: #475569;
 }
-.btn-edit { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-.btn-edit:hover { background: #dbeafe; }
 
-.btn-save { background: #22c55e; color: white; margin-right: 5px; }
-.btn-save:hover { background: #16a34a; }
+/* Edit Button (Pencil) */
+.btn-icon-edit { background: #f1f5f9; color: #334155; }
+.btn-icon-edit:hover { background: #e2e8f0; color: #0f172a; }
 
-.btn-cancel { background: #fff; color: #64748b; border-color: #cbd5e1; }
-.btn-cancel:hover { background: #f1f5f9; }
+/* Save Button (Green Tick) */
+.btn-icon-save { background: #dcfce7; color: #16a34a; }
+.btn-icon-save:hover { background: #bbf7d0; transform: translateY(-1px); }
 
-/* Add New Item Button */
+/* Cancel Button (Red Cross) */
+.btn-icon-cancel { background: #fee2e2; color: #dc2626; }
+.btn-icon-cancel:hover { background: #fecaca; transform: translateY(-1px); }
+
+/* Add New Item Button Row */
 .btn-add-item-row {
   width: 100%;
-  padding: 15px;
+  padding: 18px;
   background: #f8fafc;
   border: none;
   border-top: 1px solid #e2e8f0;
@@ -329,4 +345,6 @@
   
   .items-table-container, .sold-products-list { overflow-x: auto; }
   .report-table th, .report-table td { white-space: nowrap; padding: 12px 15px; }
+  
+  .edit-input { min-width: 80px; }
 }

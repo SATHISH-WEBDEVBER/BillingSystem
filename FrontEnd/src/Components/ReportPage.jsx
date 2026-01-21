@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Icons } from './Icons'; // Imported Icons
 import '../styles/report.css';
 
 export default function ReportPage() {
@@ -76,7 +77,7 @@ export default function ReportPage() {
   // --- EDIT HANDLERS ---
   const handleEditClick = (item, index) => {
     setEditingItemIndex(index);
-    setEditItemData({ ...item }); // Pre-fill
+    setEditItemData({ ...item }); 
   };
 
   const handleCancelEdit = () => {
@@ -85,9 +86,8 @@ export default function ReportPage() {
   };
 
   const handleSaveEdit = async (oldName) => {
-    // Basic Validation
     if(!editItemData.name || editItemData.price < 0 || editItemData.qty < 0 || !editItemData.unit) {
-      alert("Please fill all fields correctly. Price/Qty cannot be negative.");
+      alert("Please fill all fields correctly.");
       return;
     }
 
@@ -98,12 +98,11 @@ export default function ReportPage() {
         newItemData: editItemData
       });
       
-      // Refresh Data locally
       const updatedItems = [...selectedCategory.items];
       updatedItems[editingItemIndex] = { ...editItemData, price: Number(editItemData.price), qty: Number(editItemData.qty) };
       setSelectedCategory({ ...selectedCategory, items: updatedItems });
       
-      handleCancelEdit(); // Close edit mode
+      handleCancelEdit(); 
     } catch (err) {
       alert("Failed to update item.");
     }
@@ -121,9 +120,8 @@ export default function ReportPage() {
   };
 
   const handleSaveNew = async () => {
-    // STRICT VALIDATION
     if (!newItemData.name.trim() || !newItemData.unit.trim()) {
-      alert("Name and Unit are required (Strings).");
+      alert("Name and Unit are required.");
       return;
     }
     if (newItemData.price === "" || newItemData.qty === "" || isNaN(newItemData.price) || isNaN(newItemData.qty)) {
@@ -137,7 +135,6 @@ export default function ReportPage() {
         newItem: newItemData
       });
 
-      // Refresh Data locally
       const updatedItems = [...selectedCategory.items, { 
         name: newItemData.name, 
         price: Number(newItemData.price), 
@@ -146,7 +143,7 @@ export default function ReportPage() {
       }];
       setSelectedCategory({ ...selectedCategory, items: updatedItems });
 
-      handleCancelNew(); // Close add mode
+      handleCancelNew(); 
     } catch (err) {
       alert("Failed to add new item.");
     }
@@ -284,7 +281,7 @@ export default function ReportPage() {
                         <th style={{width:'100px'}}>Price</th>
                         <th style={{width:'120px'}}>Stock</th>
                         <th style={{width:'100px'}}>Unit</th>
-                        <th style={{width:'100px'}}>Actions</th>
+                        <th style={{width:'120px'}}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -298,8 +295,10 @@ export default function ReportPage() {
                               <td><input className="edit-input" type="number" value={editItemData.qty} onChange={(e) => setEditItemData({...editItemData, qty: e.target.value})} placeholder="Qty" /></td>
                               <td><input className="edit-input" value={editItemData.unit} onChange={(e) => setEditItemData({...editItemData, unit: e.target.value})} placeholder="Unit" /></td>
                               <td>
-                                <button className="btn-action btn-save" onClick={() => handleSaveEdit(item.name)}>Save</button>
-                                <button className="btn-action btn-cancel" onClick={handleCancelEdit}>X</button>
+                                <div className="action-buttons-wrapper">
+                                  <button className="btn-icon-action btn-icon-save" onClick={() => handleSaveEdit(item.name)} title="Save"><Icons.CheckSmall /></button>
+                                  <button className="btn-icon-action btn-icon-cancel" onClick={handleCancelEdit} title="Cancel"><Icons.Close /></button>
+                                </div>
                               </td>
                             </>
                           ) : (
@@ -313,7 +312,7 @@ export default function ReportPage() {
                               </td>
                               <td>{item.unit}</td>
                               <td>
-                                <button className="btn-action btn-edit" onClick={() => handleEditClick(item, i)}>✎ Edit</button>
+                                <button className="btn-icon-action btn-icon-edit" onClick={() => handleEditClick(item, i)} title="Edit Item"><span style={{fontSize:'16px'}}>✎</span></button>
                               </td>
                             </>
                           )}
@@ -326,20 +325,22 @@ export default function ReportPage() {
                           <td><input className="edit-input" value={newItemData.name} onChange={(e) => setNewItemData({...newItemData, name: e.target.value})} placeholder="New Item Name" autoFocus /></td>
                           <td><input className="edit-input" type="number" value={newItemData.price} onChange={(e) => setNewItemData({...newItemData, price: e.target.value})} placeholder="Price" /></td>
                           <td><input className="edit-input" type="number" value={newItemData.qty} onChange={(e) => setNewItemData({...newItemData, qty: e.target.value})} placeholder="Qty" /></td>
-                          <td><input className="edit-input" value={newItemData.unit} onChange={(e) => setNewItemData({...newItemData, unit: e.target.value})} placeholder="Unit (e.g. pcs)" /></td>
+                          <td><input className="edit-input" value={newItemData.unit} onChange={(e) => setNewItemData({...newItemData, unit: e.target.value})} placeholder="Unit" /></td>
                           <td>
-                            <button className="btn-action btn-save" onClick={handleSaveNew}>Add</button>
-                            <button className="btn-action btn-cancel" onClick={handleCancelNew}>X</button>
+                            <div className="action-buttons-wrapper">
+                              <button className="btn-icon-action btn-icon-save" onClick={handleSaveNew} title="Add Item"><Icons.CheckSmall /></button>
+                              <button className="btn-icon-action btn-icon-cancel" onClick={handleCancelNew} title="Cancel"><Icons.Close /></button>
+                            </div>
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                   
-                  {/* ADD BUTTON (Only visible if not currently adding) */}
+                  {/* ADD BUTTON */}
                   {!isAddingItem && (
                     <button className="btn-add-item-row" onClick={handleAddNewClick}>
-                      + Add New Item
+                      <span style={{fontSize:'18px'}}>+</span> Add New Item
                     </button>
                   )}
                 </div>
